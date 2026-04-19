@@ -1,6 +1,6 @@
 # D0Pagent
 
-`D0Pagent` 是一个面向 CTF / 渗透场景的本地化智能体。
+`D0Pagent` 是一个面向 CTF / 渗透场景的本地化智能体。思考与总结请移步至个人博客https://laijunyue.github.io/2026/04/19/%E7%AC%AC%E4%BA%8C%E5%B1%8A%E8%85%BE%E8%AE%AF%E4%BA%91%E9%BB%91%E5%AE%A2%E6%9D%BE%E6%99%BA%E8%83%BD%E6%B8%97%E9%80%8F%E6%8C%91%E6%88%98%E8%B5%9B%E5%AD%A6%E4%B9%A0%E4%B8%8E%E5%8F%8D%E6%80%9D/
 
 > Agent 意图 -> Metatooling -> PythonExecutor 执行 -> 代码内部 `import toolset` -> Browser / Terminal / Proxy / Note 协作
 
