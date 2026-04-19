@@ -1,0 +1,81 @@
+{
+  "family": "struts",
+  "product": "Struts",
+  "entries": [
+    {
+      "id": "struts-s2-045-cve-2017-5638",
+      "path": "struts_s2_045_cve_2017_5638.json",
+      "family": "struts",
+      "product": "Apache Struts",
+      "cve": "CVE-2017-5638",
+      "severity": "critical",
+      "tags": [
+        "struts",
+        "ognl",
+        "multipart",
+        "rce",
+        "s2-045"
+      ],
+      "versions": [
+        "2.3.5-2.3.31",
+        "2.5-2.5.10"
+      ],
+      "fingerprints": [
+        "Struts problem report pages",
+        ".action endpoints with file upload or multipart handling",
+        "Content-Type parsing faults mentioning Jakarta Multipart parser"
+      ],
+      "signals": [
+        "Upload-like endpoints throw 500 when malformed Content-Type is supplied",
+        "Response contains Struts, OGNL, or Jakarta multipart hints"
+      ],
+      "verification_summary": [
+        "POST /upload.action with OGNL header injection that only adds X-Struts-Probe response header"
+      ],
+      "exploitation_summary": [
+        "POST /upload.action with OGNL ProcessBuilder chain executing id or whoami"
+      ],
+      "aliases": [
+        "S2-045",
+        "Jakarta Multipart parser RCE"
+      ]
+    },
+    {
+      "id": "struts-s2-057-cve-2018-11776",
+      "path": "struts_s2_057_cve_2018_11776.json",
+      "family": "struts",
+      "product": "Apache Struts",
+      "cve": "CVE-2018-11776",
+      "severity": "critical",
+      "tags": [
+        "struts",
+        "ognl",
+        "namespace",
+        "rce",
+        "s2-057"
+      ],
+      "versions": [
+        "2.3-2.3.34",
+        "2.5-2.5.16"
+      ],
+      "fingerprints": [
+        "Struts action routes that derive namespace from URL",
+        ".action paths with dynamic namespace or action chaining"
+      ],
+      "signals": [
+        "Unexpected namespaces still resolve to action pages",
+        "Injected OGNL in path or redirect segment changes response behavior"
+      ],
+      "verification_summary": [
+        "GET /${OGNL}/index.action variant adding X-Struts-Probe response header"
+      ],
+      "exploitation_summary": [
+        "GET /${OGNL}/index.action variant executing id via ProcessBuilder"
+      ],
+      "aliases": [
+        "S2-057",
+        "namespace redirect OGNL RCE"
+      ]
+    }
+  ]
+}

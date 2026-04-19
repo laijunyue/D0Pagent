@@ -1,0 +1,76 @@
+{
+  "family": "fastjson",
+  "product": "Fastjson",
+  "entries": [
+    {
+      "id": "fastjson-autotype-jdbcrowsetimpl-rce",
+      "path": "fastjson_autotype_jdbcrowsetimpl_rce.json",
+      "family": "fastjson",
+      "product": "Fastjson",
+      "cve": "N/A",
+      "severity": "critical",
+      "tags": [
+        "fastjson",
+        "autotype",
+        "deserialization",
+        "jndi",
+        "rce"
+      ],
+      "versions": [
+        "1.2.24-1.2.47"
+      ],
+      "fingerprints": [
+        "JSON API stack traces expose com.alibaba.fastjson",
+        "AutoType support or weak blacklist behavior"
+      ],
+      "signals": [
+        "Malformed @type payloads change parser behavior",
+        "Class resolution errors mention JdbcRowSetImpl instead of immediate autoType denial"
+      ],
+      "verification_summary": [
+        "POST JSON with harmless @type class-resolution probe for com.sun.rowset.JdbcRowSetImpl and inspect parser error text"
+      ],
+      "exploitation_summary": [
+        "POST JdbcRowSetImpl JNDI payload pointing to controlled LDAP/RMI service or competition-local gadget source"
+      ],
+      "aliases": [
+        "Fastjson autoType JdbcRowSetImpl chain"
+      ]
+    },
+    {
+      "id": "fastjson-autotype-bypass-templatesimpl-rce",
+      "path": "fastjson_autotype_bypass_templatesimpl_rce.json",
+      "family": "fastjson",
+      "product": "Fastjson",
+      "cve": "N/A",
+      "severity": "high",
+      "tags": [
+        "fastjson",
+        "autotype-bypass",
+        "templatesimpl",
+        "deserialization",
+        "rce"
+      ],
+      "versions": [
+        "1.2.48-1.2.68"
+      ],
+      "fingerprints": [
+        "Fastjson parser reachable on JSON body or message queue consumer",
+        "AutoType blacklist can be bypassed with class-name wrapping or alternate gadget path"
+      ],
+      "signals": [
+        "Parser error paths differ between plain @type and wrapped @type payloads",
+        "Application classpath includes common gadget libraries or Xalan classes"
+      ],
+      "verification_summary": [
+        "POST wrapped @type probe that only triggers class loading or parser error for TemplatesImpl-related classes"
+      ],
+      "exploitation_summary": [
+        "POST TemplatesImpl-style gadget payload or equivalent bytecode-loading chain once autoType bypass is confirmed"
+      ],
+      "aliases": [
+        "Fastjson TemplatesImpl chain"
+      ]
+    }
+  ]
+}

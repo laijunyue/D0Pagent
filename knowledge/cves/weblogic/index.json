@@ -1,0 +1,83 @@
+{
+  "family": "weblogic",
+  "product": "WebLogic",
+  "entries": [
+    {
+      "id": "weblogic-cve-2017-10271-wsat-rce",
+      "path": "weblogic_cve_2017_10271_wsat_rce.json",
+      "family": "weblogic",
+      "product": "Oracle WebLogic",
+      "cve": "CVE-2017-10271",
+      "severity": "critical",
+      "tags": [
+        "weblogic",
+        "wsat",
+        "xmldecoder",
+        "rce",
+        "soap"
+      ],
+      "versions": [
+        "10.3.6.0",
+        "12.1.3.0",
+        "12.2.1.1",
+        "12.2.1.2"
+      ],
+      "fingerprints": [
+        "/wls-wsat/CoordinatorPortType reachable",
+        "SOAP or WorkContext handling exposed on WebLogic"
+      ],
+      "signals": [
+        "POST to WSAT endpoint returns SOAP fault instead of 404",
+        "Endpoint accepts WorkContext XML payloads"
+      ],
+      "verification_summary": [
+        "POST minimal WorkContext XMLDecoder probe to /wls-wsat/CoordinatorPortType and confirm SOAP fault or accepted processing path"
+      ],
+      "exploitation_summary": [
+        "POST XMLDecoder ProcessBuilder payload to WSAT endpoint for id, whoami, or controlled shell command"
+      ],
+      "aliases": [
+        "WebLogic WSAT XMLDecoder RCE"
+      ]
+    },
+    {
+      "id": "weblogic-cve-2020-14882-console-bypass-rce",
+      "path": "weblogic_cve_2020_14882_console_bypass_rce.json",
+      "family": "weblogic",
+      "product": "Oracle WebLogic",
+      "cve": "CVE-2020-14882",
+      "severity": "critical",
+      "tags": [
+        "weblogic",
+        "console",
+        "auth-bypass",
+        "mvel",
+        "rce"
+      ],
+      "versions": [
+        "10.3.6.0",
+        "12.1.3.0",
+        "12.2.1.3",
+        "12.2.1.4",
+        "14.1.1.0"
+      ],
+      "fingerprints": [
+        "/console/login/LoginForm.jsp reachable",
+        "Traversal-style encoded path to console portal bypasses auth"
+      ],
+      "signals": [
+        "GET /console/css/%252e%252e%252fconsole.portal returns console content without redirect",
+        "Injected handle parameter is evaluated by ShellSession or MVEL path"
+      ],
+      "verification_summary": [
+        "GET encoded traversal path to console.portal and verify console content or HTTP 200 without auth challenge"
+      ],
+      "exploitation_summary": [
+        "GET console.portal bypass path with handle=ShellSession(...) executing id or whoami via Runtime.exec"
+      ],
+      "aliases": [
+        "WebLogic console auth bypass RCE"
+      ]
+    }
+  ]
+}

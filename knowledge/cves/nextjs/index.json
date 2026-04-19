@@ -1,0 +1,54 @@
+{
+  "family": "nextjs",
+  "product": "Next.js",
+  "entries": [
+    {
+      "id": "nextjs-cve-2025-55182-react-flight-rce",
+      "path": "nextjs_cve_2025_55182_react_flight_rce.json",
+      "family": "nextjs",
+      "product": "Next.js",
+      "cve": "CVE-2025-55182",
+      "severity": "critical",
+      "tags": [
+        "nextjs",
+        "react",
+        "rsc",
+        "app-router",
+        "server-actions",
+        "flight",
+        "rce"
+      ],
+      "versions": [
+        ">= 14.3.0-canary.77, < 15.0.5",
+        ">= 15.1.0-canary.0, < 15.1.9",
+        ">= 15.2.0-canary.0, < 15.2.6",
+        ">= 15.3.0-canary.0, < 15.3.6",
+        ">= 15.4.0-canary.0, < 15.4.8",
+        ">= 15.5.0-canary.0, < 15.5.7",
+        ">= 16.0.0-canary.0, < 16.0.7"
+      ],
+      "fingerprints": [
+        "Next.js App Router is in use rather than a Pages Router-only deployment",
+        "GET /{app_route}?_rsc={cache_buster} with RSC headers returns text/x-component or another React Flight response",
+        "POST Server Action fetches are handled on page routes via the next-action header"
+      ],
+      "signals": [
+        "Responses show text/x-component, _rsc cache-busting behavior, or x-nextjs-* headers associated with App Router traffic",
+        "Malformed or invalid Server Action probes trigger Next.js-specific action parsing errors or x-nextjs-action-not-found",
+        "The deployment has not yet been upgraded to 15.0.5 / 15.1.9 / 15.2.6 / 15.3.6 / 15.4.8 / 15.5.7 / 16.0.7 or later"
+      ],
+      "verification_summary": [
+        "GET /{app_route}?_rsc={cache_buster} with RSC and Next-Router-State-Tree headers and confirm a text/x-component or React Flight response",
+        "POST /{app_route} with a benign body and a candidate next-action header to observe Next.js Server Action handling without using a weaponized payload"
+      ],
+      "exploitation_summary": [
+        "POST to a reachable App Router route with next-action / RSC headers and a crafted React flight body for a low-noise command-execution probe"
+      ],
+      "aliases": [
+        "React2Shell",
+        "Next.js React Flight protocol RCE",
+        "Next.js CVE-2025-66478"
+      ]
+    }
+  ]
+}

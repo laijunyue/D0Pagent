@@ -1,0 +1,78 @@
+{
+  "family": "spring",
+  "product": "Spring",
+  "entries": [
+    {
+      "id": "spring-cve-2022-22965-spring4shell",
+      "path": "spring_cve_2022_22965_spring4shell.json",
+      "family": "spring",
+      "product": "Spring Framework",
+      "cve": "CVE-2022-22965",
+      "severity": "critical",
+      "tags": [
+        "spring",
+        "spring4shell",
+        "databinding",
+        "tomcat",
+        "rce"
+      ],
+      "versions": [
+        "Spring Framework 5.3.0-5.3.17",
+        "Spring Framework 5.2.0-5.2.19"
+      ],
+      "fingerprints": [
+        "Spring MVC or Spring Boot WAR on Apache Tomcat",
+        "Java 9+ runtime with class.module path reachable in data binder"
+      ],
+      "signals": [
+        "Binding anomalies when class.module.classLoader parameters are submitted",
+        "Tomcat-specific behavior and writable log pipeline assumptions hold"
+      ],
+      "verification_summary": [
+        "POST to suspected binder endpoint with benign class.module.classLoader probe and inspect for binder error or pipeline mutation signal"
+      ],
+      "exploitation_summary": [
+        "POST to writable binder endpoint to reconfigure AccessLogValve and drop a JSP shell"
+      ],
+      "aliases": [
+        "Spring4Shell"
+      ]
+    },
+    {
+      "id": "spring-cve-2022-22947-spring-cloud-gateway-rce",
+      "path": "spring_cve_2022_22947_spring_cloud_gateway_rce.json",
+      "family": "spring",
+      "product": "Spring Cloud Gateway",
+      "cve": "CVE-2022-22947",
+      "severity": "critical",
+      "tags": [
+        "spring",
+        "gateway",
+        "spel",
+        "actuator",
+        "rce"
+      ],
+      "versions": [
+        "3.1.0",
+        "3.0.0-3.0.6"
+      ],
+      "fingerprints": [
+        "/actuator/gateway/routes exposed",
+        "Spring Cloud Gateway actuator endpoints reachable without strong auth"
+      ],
+      "signals": [
+        "Custom routes can be created and refreshed",
+        "Response header filters reflect SpEL evaluation"
+      ],
+      "verification_summary": [
+        "POST /actuator/gateway/routes/{id} with harmless AddResponseHeader filter and refresh to observe X-SCG-Probe"
+      ],
+      "exploitation_summary": [
+        "POST route definition with SpEL Runtime.exec in AddResponseHeader or SetResponseHeader filter, then refresh and trigger route"
+      ],
+      "aliases": [
+        "Spring Cloud Gateway Actuator RCE"
+      ]
+    }
+  ]
+}

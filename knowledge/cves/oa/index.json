@@ -1,0 +1,231 @@
+{
+  "family": "oa",
+  "product": "OA / Collaboration Suites",
+  "entries": [
+    {
+      "id": "seeyon-oa-htmlofficeservlet-file-upload",
+      "path": "seeyon_oa_htmlofficeservlet_file_upload.json",
+      "family": "oa",
+      "product": "Seeyon OA",
+      "cve": "N/A",
+      "severity": "critical",
+      "tags": [
+        "oa",
+        "seeyon",
+        "file-upload",
+        "jsp",
+        "foothold"
+      ],
+      "versions": [
+        "A6",
+        "A8",
+        "A8-N",
+        "V8"
+      ],
+      "fingerprints": [
+        "Login pages, titles, or static resources mention Seeyon / 致远互联",
+        "/seeyon/htmlofficeservlet is reachable before authentication"
+      ],
+      "signals": [
+        "Multipart POST returns upload-success markers, file id, or a retrievable relative path",
+        "Legacy Seeyon deployment keeps uploaded content under web-accessible servlet paths"
+      ],
+      "verification_summary": [
+        "POST a harmless multipart probe to /seeyon/htmlofficeservlet and confirm upload-success markers without dropping executable content"
+      ],
+      "exploitation_summary": [
+        "Upload a JSP foothold through /seeyon/htmlofficeservlet, then trigger it from the returned path"
+      ],
+      "aliases": [
+        "致远 OA htmlofficeservlet upload",
+        "Seeyon htmlofficeservlet"
+      ]
+    },
+    {
+      "id": "seeyon-oa-wpsassistservlet-file-upload",
+      "path": "seeyon_oa_wpsassistservlet_file_upload.json",
+      "family": "oa",
+      "product": "Seeyon OA",
+      "cve": "N/A",
+      "severity": "high",
+      "tags": [
+        "oa",
+        "seeyon",
+        "wpsassistservlet",
+        "file-upload",
+        "jsp"
+      ],
+      "versions": [
+        "A8",
+        "A8-N",
+        "V8"
+      ],
+      "fingerprints": [
+        "/seeyon/wpsAssistServlet is exposed",
+        "Seeyon WPS or office-integration components are enabled"
+      ],
+      "signals": [
+        "Servlet accepts multipart office-attachment traffic before full authentication",
+        "Response exposes attachment identifiers or relative storage paths"
+      ],
+      "verification_summary": [
+        "POST a benign office-style multipart probe to /seeyon/wpsAssistServlet and confirm upload handling without writing executable content"
+      ],
+      "exploitation_summary": [
+        "Abuse /seeyon/wpsAssistServlet to place a controllable server-side payload into a reachable path"
+      ],
+      "aliases": [
+        "致远 OA wpsAssistServlet upload",
+        "Seeyon wpsAssistServlet"
+      ]
+    },
+    {
+      "id": "weaver-ecology-beanshell-rce",
+      "path": "weaver_ecology_beanshell_rce.json",
+      "family": "oa",
+      "product": "Weaver Ecology OA",
+      "cve": "N/A",
+      "severity": "critical",
+      "tags": [
+        "oa",
+        "weaver",
+        "ecology",
+        "beanshell",
+        "rce"
+      ],
+      "versions": [
+        "Ecology 8.x",
+        "Ecology 9.x"
+      ],
+      "fingerprints": [
+        "Login pages, SPA routes, or static assets mention Ecology / 泛微",
+        "/bsh.servlet.BshServlet is reachable"
+      ],
+      "signals": [
+        "BeanShell endpoint returns interpreter output or a recognizable error banner",
+        "POSTed bsh.script content changes the HTTP response body"
+      ],
+      "verification_summary": [
+        "POST a harmless BeanShell print probe to /bsh.servlet.BshServlet and match the echoed marker"
+      ],
+      "exploitation_summary": [
+        "POST a BeanShell execution script to /bsh.servlet.BshServlet to run id / whoami and pivot from returned output"
+      ],
+      "aliases": [
+        "泛微 Ecology BeanShell",
+        "Weaver BshServlet RCE"
+      ]
+    },
+    {
+      "id": "weaver-eoffice-uploadfile-file-upload",
+      "path": "weaver_eoffice_uploadfile_file_upload.json",
+      "family": "oa",
+      "product": "Weaver E-Office",
+      "cve": "N/A",
+      "severity": "high",
+      "tags": [
+        "oa",
+        "weaver",
+        "eoffice",
+        "file-upload",
+        "webshell"
+      ],
+      "versions": [
+        "E-Office 9.x"
+      ],
+      "fingerprints": [
+        "Static assets or page titles mention e-office / 泛微 e-office",
+        "/general/index/UploadFile.php is reachable"
+      ],
+      "signals": [
+        "Unauthenticated or weakly protected uploadPicture endpoint accepts multipart data",
+        "Response contains attachment id, stored filename, or relative upload path"
+      ],
+      "verification_summary": [
+        "POST a harmless file probe to /general/index/UploadFile.php?m=uploadPicture&uploadType=eoffice_logo&userId= and confirm saved-path markers"
+      ],
+      "exploitation_summary": [
+        "Use the uploadPicture flow to place a controllable payload or disguised script in a reachable directory"
+      ],
+      "aliases": [
+        "泛微 E-Office uploadPicture",
+        "Weaver E-Office UploadFile"
+      ]
+    },
+    {
+      "id": "yonyou-nc-beanshell-rce",
+      "path": "yonyou_nc_beanshell_rce.json",
+      "family": "oa",
+      "product": "Yonyou NC",
+      "cve": "N/A",
+      "severity": "critical",
+      "tags": [
+        "oa",
+        "yonyou",
+        "nc",
+        "beanshell",
+        "rce"
+      ],
+      "versions": [
+        "NC 6.x",
+        "NC 6.5",
+        "NC Cloud"
+      ],
+      "fingerprints": [
+        "Login pages or static assets mention NC, UAP, 用友, or nccloud",
+        "/servlet/~ic/bsh.servlet.BshServlet is reachable"
+      ],
+      "signals": [
+        "BeanShell servlet returns script output or execution errors",
+        "POSTed bsh.script changes the response body without full authentication"
+      ],
+      "verification_summary": [
+        "POST a harmless BeanShell print probe to /servlet/~ic/bsh.servlet.BshServlet and match a known marker"
+      ],
+      "exploitation_summary": [
+        "POST a BeanShell execution script to /servlet/~ic/bsh.servlet.BshServlet and use the command output to enumerate the host"
+      ],
+      "aliases": [
+        "用友 NC BeanShell",
+        "Yonyou NC BshServlet"
+      ]
+    },
+    {
+      "id": "landray-ekp-custom-jsp-file-read",
+      "path": "landray_ekp_custom_jsp_file_read.json",
+      "family": "oa",
+      "product": "Landray EKP",
+      "cve": "N/A",
+      "severity": "high",
+      "tags": [
+        "oa",
+        "landray",
+        "ekp",
+        "file-read",
+        "config-leak"
+      ],
+      "versions": [
+        "EKP 15.x",
+        "EKP 16.x"
+      ],
+      "fingerprints": [
+        "Login pages or resources mention EKP / 蓝凌",
+        "/sys/ui/extend/varkind/custom.jsp is reachable"
+      ],
+      "signals": [
+        "custom.jsp reflects server-side file content or template errors when attacker-controlled file paths are supplied",
+        "Accessible configuration files reveal JDBC, LDAP, or admin account material"
+      ],
+      "verification_summary": [
+        "Request /sys/ui/extend/varkind/custom.jsp with a harmless readable target such as login.jsp and match returned page fragments"
+      ],
+      "exploitation_summary": [
+        "Read WEB-INF or KmssConfig files through custom.jsp, then pivot with harvested credentials, tokens, or database connection data"
+      ],
+      "aliases": [
+        "蓝凌 EKP custom.jsp",
+        "Landray custom.jsp file read"
+      ]
+    }
+  ]
+}

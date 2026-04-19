@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "families": [
+    {
+      "family": "thinkphp",
+      "product": "ThinkPHP",
+      "index": "thinkphp/index.json",
+      "summary": "ThinkPHP 5.x N-day and RCE-oriented local knowledge entries."
+    },
+    {
+      "family": "spring",
+      "product": "Spring",
+      "index": "spring/index.json",
+      "summary": "Spring Framework, Spring Cloud Gateway, and related web exploitation knowledge."
+    },
+    {
+      "family": "nextjs",
+      "product": "Next.js",
+      "index": "nextjs/index.json",
+      "summary": "Next.js App Router and React Server Components exploitation knowledge."
+    },
+    {
+      "family": "struts",
+      "product": "Struts",
+      "index": "struts/index.json",
+      "summary": "Apache Struts OGNL and multipart parser RCE knowledge entries."
+    },
+    {
+      "family": "fastjson",
+      "product": "Fastjson",
+      "index": "fastjson/index.json",
+      "summary": "Fastjson autoType and deserialization-oriented local knowledge entries."
+    },
+    {
+      "family": "weblogic",
+      "product": "WebLogic",
+      "index": "weblogic/index.json",
+      "summary": "Oracle WebLogic WSAT, console bypass, and related RCE knowledge entries."
+    },
+    {
+      "family": "oa",
+      "product": "OA / Collaboration Suites",
+      "index": "oa/index.json",
+      "summary": "Common Chinese OA exploitation knowledge for Seeyon, Weaver, Yonyou, and Landray competition targets."
+    },
+    {
+      "family": "jboss",
+      "product": "JBoss",
+      "index": "jboss/index.json",
+      "summary": "JBoss invoker, JMX console, and deployment abuse knowledge entries."
+    }
+  ]
+}

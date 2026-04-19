@@ -1,0 +1,24 @@
+{
+  "scan_type": "quick_scan",
+  "target": "192.168.100.1",
+  "timestamp": "2025-08-19T22:49:49.735Z",
+  "summary": {
+    "total_scans": 2,
+    "successful_scans": 0,
+    "failed_scans": 2,
+    "total_vulnerabilities": 0,
+    "scanners": [
+      {
+        "scan_type": "trivy",
+        "success": false,
+        "error": "2025-08-19T15:49:49-07:00\tINFO\t[vuln] Vulnerability scanning is enabled\n2025-08-19T15:49:49-07:00\tINFO\t[secret] Secret scanning is enabled\n2025-08-19T15:49:49-07:00\tINFO\t[secret] If your scanning is slow, please try '--scanners vuln' to disable secret scanning\n2025-08-19T15:49:49-07:00\tINFO\t[secret] Please see also https://trivy.dev/v0.65/docs/scanner/secret#recommendation for faster secret detection\n2025-08-19T15:49:49-07:00\tFATAL\tFatal error\trun error: fs scan error: scan error: scan failed: failed analysis: analyze with traversal: walk dir error: unknown error with 192.168.100.1: lstat 192.168.100.1: no such file or directory\n"
+      },
+      {
+        "scan_type": "snyk",
+        "success": false,
+        "error": "Failed to parse Snyk output"
+      }
+    ]
+  },
+  "note": "Quick scan summary only. Found 0 total vulnerabilities. Use individual scanner tools for detailed results."
+}

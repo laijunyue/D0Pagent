@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Attack Scripts and Results (sensitive)
+*.rc
+*.xml
+garey_*
+unifi_*
+pivot_*
+*_attack*
+*_target*
+*_stealth*
+*_recon*
+*_discovery*
+
+# Test files
+test_*.py
+simple_*.py
+
+# Reports and Documentation (sensitive)
+PENETRATION_TEST_REPORT.md
+*_REPORT.md
+*_ROADMAP*.md
+*_ANALYSIS*.md
+
+# Temporary and backup files
+*.bak
+*.tmp
+*.log
+*.cache
+
+# MCP development files (not needed for production)
+mcp_server_complete.py
+mcp_server_fixed.py
+mcp_server_best_practices.py
+msf_final_five_tools.py
+msf_ecosystem_tools.py
+improved_msf_parser.py
+msfconsole_mcp_enhanced.py
+
+# Configuration (keep only essential)
+.mcp.json

